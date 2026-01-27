@@ -79,5 +79,21 @@ switch ($method) {
             echo json_encode(['error' => $e->getMessage()]);
         }
         break;
+    case 'DELETE':
+        if (isset($_GET['all']) && $_GET['all'] === 'true') {
+            $sql = "DELETE FROM tasks";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            echo json_encode(['message' => 'All tasks deleted']);
+        } elseif (isset($_GET['id'])) {
+            $sql = "DELETE FROM tasks WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([':id' => $_GET['id']]);
+            echo json_encode(['message' => 'Task deleted']);
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ID or all parameter']);
+        }
+        break;
 }
 ?>

@@ -91,6 +91,14 @@ export const api = {
         return response.json();
     },
 
+    deleteAllTasks: async (): Promise<{ message: string }> => {
+        const response = await fetch(`${API_BASE_URL}/tasks.php?all=true`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete all tasks');
+        return response.json();
+    },
+
     // Invoices
     getInvoices: async (): Promise<Invoice[]> => {
         const response = await fetch(`${API_BASE_URL}/invoices.php`);

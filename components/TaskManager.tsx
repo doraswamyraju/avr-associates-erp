@@ -8,7 +8,7 @@ import { api } from '../src/services/api';
 import {
     LayoutGrid, List, Plus, X, Play, Clock, ChevronRight, Search,
     User as UserIcon, StopCircle, IndianRupee, Layers, TrendingUp, Zap,
-    MousePointer2, Briefcase, History, AlertTriangle
+    MousePointer2, Briefcase, History, AlertTriangle, Trash2
 } from 'lucide-react';
 
 interface TaskManagerProps {
@@ -16,12 +16,20 @@ interface TaskManagerProps {
     currentUser?: User;
     quickAction?: string | null;
     onQuickActionHandled?: () => void;
-    preSelectedAssignee?: string | null;
-    activeTaskTimer: { task: Task, startTime: Date } | null;
-    setActiveTaskTimer: (timer: { task: Task, startTime: Date } | null) => void;
+    preSelectedAssignee?: string;
+    activeTaskTimer?: { task: Task, startTime: Date } | null;
+    setActiveTaskTimer?: (timer: { task: Task, startTime: Date } | null) => void;
 }
 
-const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, quickAction, onQuickActionHandled, preSelectedAssignee, activeTaskTimer, setActiveTaskTimer }) => {
+const TaskManager: React.FC<TaskManagerProps> = ({
+    selectedBranch,
+    currentUser,
+    quickAction,
+    onQuickActionHandled,
+    preSelectedAssignee,
+    activeTaskTimer,
+    setActiveTaskTimer
+}) => {
     const [activeTab, setActiveTab] = useState<'tasks' | 'projects'>('tasks');
     const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -33,6 +41,14 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
     const [textSearch, setTextSearch] = useState('');
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [showAllocationModal, setShowAllocationModal] = useState(false);
+
+    useEffect(() => {
+        if (quickAction === 'NEW_TASK' || quickAction === 'NEW_PROJECT') {
+            setShowAllocationModal(true);
+            onQuickActionHandled?.();
+        }
+    }, [quickAction]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -62,6 +78,48 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
         const textMatch = !textSearch || task.clientName.toLowerCase().includes(textSearch.toLowerCase()) || task.serviceType.toLowerCase().includes(textSearch.toLowerCase());
         return branchMatch && roleMatch && statusMatch && textMatch;
     });
+
+    const handleDeleteAllTasks = async () => {
+        if (confirm("CRITICAL WARNING: This will delete ALL tasks/engagements from the database. This action cannot be undone. Are you sure?")) {
+            try {
+                await api.deleteAllTasks();
+                setTasks([]);
+                alert("System purged. All tasks have been removed.");
+            } catch (e) {
+                console.error("Failed to delete all", e);
+                alert("Failed to delete tasks.");
+            }
+        }
+    };
+
+    const handleCreateAllocation = async (data: any) => {
+        const matchedClient = clients.find(c => c.name === data.clientName);
+        if (!matchedClient) { alert("Please select a valid client from the list."); return; }
+
+        try {
+            await api.createTask({
+                clientName: matchedClient.name,
+                clientId: matchedClient.id,
+                serviceType: data.serviceType,
+                dueDate: data.dueDate,
+                priority: data.priority,
+                status: TaskStatus.NEW,
+                branch: matchedClient.branch,
+                assignedTo: '',
+                period: 'FY24-25',
+                slaProgress: 0,
+                totalTrackedMinutes: 0
+            } as any);
+
+            setShowAllocationModal(false);
+            const updated = await api.getTasks();
+            setTasks(updated);
+            alert("Allocation Created Successfully");
+        } catch (e: any) {
+            console.error("Failed create task", e);
+            alert("Failed to create allocation: " + e.message);
+        }
+    };
 
     const handleImportTasks = async (data: any[]) => {
         let successCount = 0;
@@ -142,6 +200,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
 
     return (
         <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
+            {showAllocationModal && <NewAllocationModal onClose={() => setShowAllocationModal(false)} onSave={handleCreateAllocation} clients={clients} />}
             {loading && <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}
             <div className="p-6 bg-white border-b border-slate-200 shrink-0">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -154,12 +213,15 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
                             <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Workload</button>
                             <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Yield Intelligence</button>
                         </div>
+                        {tasks.length > 0 && (
+                            <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge</button>
+                        )}
                         <ExcelImporter
                             templateName="Tasks"
                             requiredColumns={['Client Name']}
                             onImport={handleImportTasks}
                         />
-                        <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Allocation</button>
+                        <button onClick={() => setShowAllocationModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Allocation</button>
                     </div>
                 </div>
 
@@ -434,6 +496,67 @@ const PerformTaskModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t
                 <div className="p-10 border-t border-slate-100 flex gap-6 shrink-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
                     <button onClick={onClose} className="flex-1 py-5 text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-red-500 transition-colors">Discard Draft</button>
                     <button onClick={handleSave} className="flex-2 px-12 py-5 bg-slate-900 text-white rounded-[1.75rem] text-[11px] font-black uppercase tracking-[0.4em] hover:bg-indigo-600 shadow-2xl transition-all active:scale-95">Update Lifecycle</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[] }> = ({ onClose, onSave, clients }) => {
+    const [clientName, setClientName] = useState('');
+    const [serviceType, setServiceType] = useState('Income Tax Filing');
+    const [dueDate, setDueDate] = useState('');
+    const [priority, setPriority] = useState('Medium');
+    const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+
+    useEffect(() => {
+        if (clientName) {
+            setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase())).slice(0, 5));
+        } else {
+            setFilteredClients([]);
+        }
+    }, [clientName, clients]);
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                <h3 className="text-lg font-black text-slate-800 mb-6">New Resource Allocation</h3>
+
+                <div className="space-y-4">
+                    <div className="relative">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Client Entity</label>
+                        <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Search client..." />
+                        {filteredClients.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 z-50 overflow-hidden">
+                                {filteredClients.map(c => (
+                                    <div key={c.id} onClick={() => { setClientName(c.name); setFilteredClients([]); }} className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm font-bold text-slate-700">
+                                        {c.name} <span className="text-[10px] text-slate-400 font-normal ml-2">{c.branch}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Service Type</label>
+                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={serviceType} onChange={e => setServiceType(e.target.value)}>
+                            {['Income Tax Filing', 'GST Compliance', 'Audit Assurance', 'Company Law', 'Consultancy'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Due Date</label>
+                        <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
+                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
+                            <option>Low</option><option>Medium</option><option>High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <button onClick={onClose} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                    <button onClick={() => onSave({ clientName, serviceType, dueDate, priority })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Allocate</button>
                 </div>
             </div>
         </div>

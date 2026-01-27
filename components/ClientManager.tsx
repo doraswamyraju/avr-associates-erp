@@ -6,7 +6,7 @@ import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
     Building, LayoutGrid, List, Landmark, MapPin, UserPlus,
-    Calendar, Users, Info, Trash2, Edit
+    Calendar, Users, Info, Trash2, Edit, FolderOpen
 } from 'lucide-react';
 
 import { api } from '../src/services/api';
