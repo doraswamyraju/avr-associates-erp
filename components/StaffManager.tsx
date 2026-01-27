@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { ExcelImporter } from './ExcelImporter';
 import { MOCK_STAFF, MOCK_TASKS } from '../constants';
 import { BranchName, Staff, TaskStatus } from '../types';
-import { 
-    Search, Plus, MapPin, Mail, Phone, MoreHorizontal, Clock, 
+import {
+    Search, Plus, MapPin, Mail, Phone, MoreHorizontal, Clock,
     AtSign, Briefcase, User, ChevronRight, List, LayoutGrid,
     IndianRupee, TrendingUp, ShieldCheck, Zap
 } from 'lucide-react';
@@ -19,8 +20,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
 
     const filteredStaff = staffList.filter(staff => {
         const matchesBranch = selectedBranch === BranchName.ALL || staff.branch === selectedBranch;
-        const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              staff.role.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            staff.role.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesBranch && matchesSearch;
     });
 
@@ -31,6 +32,33 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
         const pending = total - completed;
         const score = total === 0 ? 0 : Math.round((completed / total) * 100);
         return { total, pending, score };
+    };
+
+    const handleImportStaff = async (data: any[]) => {
+        let successCount = 0;
+        // Mock import since we don't have an API call in this component yet (it uses mock state)
+        // Ideally we would POST to /api/staff
+        // For now, we update local state
+        const newStaff: Staff[] = [];
+        for (const row of data) {
+            const s: Staff = {
+                id: `S${Math.floor(Math.random() * 9000) + 1000}`,
+                name: row['Name'] || row['name'],
+                role: row['Role'] || row['role'] || 'Junior Accountant',
+                branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                email: row['Email'] || row['email'],
+                hourlyRate: parseInt(row['Rate'] || row['rate'] || '200'),
+                avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(row['Name'] || 'User')}&background=random&bold=true`,
+                isClockedIn: false,
+                mtdTrackedHours: 0
+            };
+            if (s.name) {
+                newStaff.push(s);
+                successCount++;
+            }
+        }
+        setStaffList(prev => [...prev, ...newStaff]);
+        alert(`Imported ${successCount} staff members!`);
     };
 
     return (
@@ -47,6 +75,11 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                             <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={20} /></button>
                             <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={20} /></button>
                         </div>
+                        <ExcelImporter
+                            templateName="Staff"
+                            requiredColumns={['Name', 'Role', 'Email']}
+                            onImport={handleImportStaff}
+                        />
                         <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl shadow-slate-200 transition-all active:scale-95"><Plus size={18} strokeWidth={3} /> Register Employee</button>
                     </div>
                 </div>
@@ -75,10 +108,10 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                                             <span className={`text-[10px] font-black uppercase tracking-widest ${staff.isClockedIn ? 'text-emerald-600' : 'text-slate-300'}`}>{staff.isClockedIn ? 'Clocked In' : 'Offline'}</span>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex flex-col items-center text-center mb-8 shrink-0">
                                         <div className="relative mb-4 group-hover:scale-105 transition-transform duration-500">
-                                            <img src={staff.avatarUrl} alt={staff.name} className="w-24 h-24 rounded-[1.75rem] object-cover border-4 border-white shadow-xl relative z-10"/>
+                                            <img src={staff.avatarUrl} alt={staff.name} className="w-24 h-24 rounded-[1.75rem] object-cover border-4 border-white shadow-xl relative z-10" />
                                             <div className="absolute -bottom-2 -right-2 bg-white p-2 rounded-xl shadow-lg border border-slate-100 z-20"><Briefcase size={16} className="text-indigo-600" /></div>
                                         </div>
                                         <h3 className="text-xl font-black text-slate-800 tracking-tight">{staff.name}</h3>
@@ -147,12 +180,12 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                                                         <span className="font-black text-slate-700">{staff.mtdTrackedHours}h Tracked</span>
                                                     </div>
                                                     <div className="w-24 h-1 bg-slate-100 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-indigo-500 rounded-full" style={{width: `${Math.min(100, (staff.mtdTrackedHours/180)*100)}%`}}></div>
+                                                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, (staff.mtdTrackedHours / 180) * 100)}%` }}></div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <span className="font-black text-slate-600 flex items-center gap-1"><IndianRupee size={12}/>{staff.hourlyRate}/hr</span>
+                                                <span className="font-black text-slate-600 flex items-center gap-1"><IndianRupee size={12} />{staff.hourlyRate}/hr</span>
                                             </td>
                                             <td className="px-6 py-5">
                                                 <div className="flex flex-col">
@@ -161,7 +194,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-200"><MoreHorizontal size={20}/></button>
+                                                <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-200"><MoreHorizontal size={20} /></button>
                                             </td>
                                         </tr>
                                     );
@@ -189,17 +222,17 @@ const AddStaffModal: React.FC<{ onClose: () => void, onAdd: (s: Staff) => void }
                 </div>
                 <form onSubmit={handleSubmit} className="p-8 space-y-5">
                     <div className="space-y-4">
-                        <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Full Identity" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                        <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Full Identity" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                         <div className="grid grid-cols-2 gap-4">
-                            <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Designation" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} />
-                            <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.branch} onChange={e => setFormData({...formData, branch: e.target.value as BranchName})}>{Object.values(BranchName).filter(b => b !== BranchName.ALL).map(b => <option key={b}>{b}</option>)}</select>
+                            <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Designation" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
+                            <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value as BranchName })}>{Object.values(BranchName).filter(b => b !== BranchName.ALL).map(b => <option key={b}>{b}</option>)}</select>
                         </div>
-                        <input required type="email" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Official Email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                        <input required type="email" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Official Email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
                         <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex flex-col gap-2">
                             <label className="text-[10px] font-black uppercase text-indigo-400 tracking-widest ml-1">Hourly Billable Rate (₹)</label>
                             <div className="relative">
                                 <IndianRupee size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400" />
-                                <input required type="number" className="w-full pl-10 pr-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.rate} onChange={e => setFormData({...formData, rate: parseInt(e.target.value)})} />
+                                <input required type="number" className="w-full pl-10 pr-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.rate} onChange={e => setFormData({ ...formData, rate: parseInt(e.target.value) })} />
                             </div>
                         </div>
                     </div>

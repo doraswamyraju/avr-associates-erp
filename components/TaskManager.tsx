@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { ExcelImporter } from './ExcelImporter';
 import { MOCK_STAFF } from '../constants';
 import { BranchName, TaskStatus, Task, Priority, UserRole, User, Project, ProjectStatus, TimeLogEntry } from '../types';
 import { StatusBadge } from './Dashboard';
@@ -59,6 +60,34 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
         return branchMatch && roleMatch && statusMatch && textMatch;
     });
 
+    const handleImportTasks = async (data: any[]) => {
+        let successCount = 0;
+        for (const row of data) {
+            const newTask: Partial<Task> = {
+                clientName: row['Client'] || row['client'],
+                serviceType: row['Service'] || row['service'],
+                dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
+                status: TaskStatus.NEW,
+                priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
+                assignedTo: row['Assignee'] || row['assignee'] || '',
+                branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName
+            };
+            // In real app, post to API
+            // For now, we mock it by adding to local state
+            if (newTask.clientName) {
+                // Mock ID generation
+                const t: Task = {
+                    ...newTask,
+                    id: `TSK-${Math.floor(Math.random() * 10000)}`,
+                    clientId: 'UNK', projectId: 'UNK', period: 'FY23-24', slaProgress: 0, totalTrackedMinutes: 0
+                } as Task;
+                setTasks(prev => [t, ...prev]);
+                successCount++;
+            }
+        }
+        alert(`Calculated ${successCount} new tasks from import.`);
+    };
+
     const getProjectProgress = (projectId: string) => {
         const projectTasks = tasks.filter(t => t.projectId === projectId);
         if (projectTasks.length === 0) return 0;
@@ -93,6 +122,11 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
                             <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Workload</button>
                             <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Yield Intelligence</button>
                         </div>
+                        <ExcelImporter
+                            templateName="Tasks"
+                            requiredColumns={['Client', 'Service']}
+                            onImport={handleImportTasks}
+                        />
                         <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Allocation</button>
                     </div>
                 </div>

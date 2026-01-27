@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ExcelImporter } from './ExcelImporter';
 import { SERVICE_TYPES } from '../constants';
 import { BranchName, Client, Project } from '../types';
 import {
@@ -92,6 +93,43 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
         }
     };
 
+    const handleImportClients = async (data: any[]) => {
+        // Map Excel columns to Client object
+        // Expected headers: Name, Phone, Email, City, Branch, Type
+        let successCount = 0;
+        for (const row of data) {
+            try {
+                const client: Client = {
+                    id: '', // Backend assigns ID usually, or we generat temp
+                    name: row['Name'] || row['name'],
+                    phone: row['Phone'] || row['phone'],
+                    email: row['Email'] || row['email'],
+                    city: row['City'] || row['city'],
+                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                    type: (row['Type'] || row['type'] || 'Individual'),
+                    pan: row['PAN'] || row['pan'] || '',
+                    status: 'Active',
+                    // Defaults
+                    address: row['Address'] || '',
+                    state: 'Andhra Pradesh',
+                    pincode: row['Pincode'] || '',
+                } as Client;
+
+                if (client.name) {
+                    await api.createClient(client);
+                    successCount++;
+                }
+            } catch (err) {
+                console.error("Failed to import row", row, err);
+            }
+        }
+
+        // Refresh list
+        const updated = await api.getClients();
+        setClients(updated);
+        alert(`Successfully imported ${successCount} clients!`);
+    };
+
     if (viewMode === 'onboarding') {
         return <ClientOnboardingWizard onBack={handleBack} onSave={handleSaveClient} defaultBranch={selectedBranch === BranchName.ALL ? BranchName.RAVULAPALEM : selectedBranch} />;
     }
@@ -111,6 +149,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                         <p className="text-slate-500 text-sm font-medium">Manage cross-branch portfolios and compliance engagements.</p>
                     </div>
                     <div className="flex gap-3">
+                        <ExcelImporter
+                            templateName="Clients"
+                            requiredColumns={['Name', 'Phone']}
+                            onImport={handleImportClients}
+                        />
                         <div className="flex bg-slate-100 rounded-xl p-1 border border-slate-200">
                             <button onClick={() => setDirectoryViewType('grid')} className={`p-2 rounded-lg transition-all ${directoryViewType === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={20} /></button>
                             <button onClick={() => setDirectoryViewType('list')} className={`p-2 rounded-lg transition-all ${directoryViewType === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={20} /></button>
