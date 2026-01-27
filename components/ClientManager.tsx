@@ -121,8 +121,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
             setShowEngagementModal(false);
             // Ideally refresh tasks in detail view, but for now just close
             alert("Engagement Created Successfully");
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed create task", e);
+            alert("Failed to create engagement: " + (e.message || "Unknown error"));
         }
     };
 

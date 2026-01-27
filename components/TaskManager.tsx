@@ -68,9 +68,9 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
         const newTasks: Task[] = [];
 
         for (const row of data) {
-            const clientName = row['Client'] || row['client'];
+            const clientName = row['Client Name'] || row['Client'] || row['client'];
             // Find client ID by name (case-insensitive)
-            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').toLowerCase());
+            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
 
             if (clientName && matchedClient) {
                 const newTask: Partial<Task> = {
@@ -101,7 +101,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
             setTasks(prev => [...newTasks, ...prev]);
             alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
         } else {
-            alert("No matching clients found for import. Ensure Client names match exactly.");
+            alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
         }
     };
 
@@ -141,7 +141,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
                         </div>
                         <ExcelImporter
                             templateName="Tasks"
-                            requiredColumns={['Client', 'Service']}
+                            requiredColumns={['Client Name']}
                             onImport={handleImportTasks}
                         />
                         <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Allocation</button>
