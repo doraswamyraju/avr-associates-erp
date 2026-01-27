@@ -18,8 +18,8 @@ switch ($method) {
         
         $stmt = $pdo->prepare($sql);
         
-        // Generate ID if not provided
-        if (!isset($data['id'])) {
+        // Generate ID if not provided or empty string
+        if (empty($data['id'])) {
             $data['id'] = 'C' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
         }
 
