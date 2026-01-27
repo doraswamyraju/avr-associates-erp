@@ -31,9 +31,18 @@ jobs:
         key: ${{ secrets.HOSTINGER_SSH_KEY }}
         port: 22
         script: |
-          cd domains/sriddha.com/public_html/avr
-          git pull origin master
+          # Ensure directory exists (first run)
+          mkdir -p /var/www/avr
+          cd /var/www/avr
+          
+          # Initialize git if not present
+          if [ ! -d ".git" ]; then
+            git clone https://github.com/doraswamyraju/avr-associates-erp.git .
+          fi
+
+          git pull origin main
           npm install
           npm run build
-          # Move build files to root if needed (optional, depending on your server config)
-          # cp -r dist/* .
+          
+          # Restart Nginx to ensure it picks up changes if needed (usually not for static files, but good practice)
+          # sudo systemctl reload nginx
