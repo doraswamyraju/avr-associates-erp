@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
 import { SERVICE_TYPES } from '../constants';
-import { BranchName, Client, Project } from '../types';
+import { BranchName, Client, Project, Task, TaskStatus } from '../types';
 import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
     Building, LayoutGrid, List, Landmark, MapPin, UserPlus,
-    Calendar, Users, Info
+    Calendar, Users, Info, Trash2, Edit
 } from 'lucide-react';
 
 import { api } from '../src/services/api';
@@ -21,13 +21,17 @@ type ViewState = 'directory' | 'client_detail' | 'onboarding';
 
 const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled }) => {
     const [viewMode, setViewMode] = useState<ViewState>('directory');
-    const [directoryViewType, setDirectoryViewType] = useState<'grid' | 'list'>('grid');
+    const [directoryViewType, setDirectoryViewType] = useState<'grid' | 'list'>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+    const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+    const [clientIdToEdit, setClientIdToEdit] = useState<Client | undefined>(undefined);
     const [clients, setClients] = useState<Client[]>([]); // Initialize empty
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
+
     const [searchTerm, setSearchTerm] = useState('');
+    const [showEngagementModal, setShowEngagementModal] = useState(false);
 
     useEffect(() => {
         const fetchClients = async () => {
@@ -84,12 +88,41 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
 
     const handleSaveClient = async (clientData: Client) => {
         try {
-            const newClient = await api.createClient(clientData);
-            setClients([newClient, ...clients]);
+            if (clientData.id && clientIdToEdit) {
+                await api.updateClient(clientData);
+                setClients(clients.map(c => c.id === clientData.id ? clientData : c));
+            } else {
+                const newClient = await api.createClient(clientData);
+                setClients([newClient, ...clients]);
+            }
             setViewMode('directory');
+            setClientIdToEdit(undefined);
         } catch (err) {
-            console.error('Failed to create client', err);
-            // Optionally set error state to show to user
+            console.error('Failed to save client', err);
+        }
+    };
+
+    const handleCreateEngagement = async (data: any) => {
+        if (!selectedClient) return;
+        try {
+            await api.createTask({
+                clientName: selectedClient.name,
+                clientId: selectedClient.id,
+                serviceType: data.serviceType,
+                dueDate: data.dueDate,
+                priority: data.priority,
+                status: TaskStatus.NEW,
+                branch: selectedClient.branch,
+                assignedTo: '',
+                period: 'FY24-25',
+                slaProgress: 0,
+                totalTrackedMinutes: 0
+            } as any);
+            setShowEngagementModal(false);
+            // Ideally refresh tasks in detail view, but for now just close
+            alert("Engagement Created Successfully");
+        } catch (e) {
+            console.error("Failed create task", e);
         }
     };
 
@@ -130,12 +163,40 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
         alert(`Successfully imported ${successCount} clients!`);
     };
 
+    const handleBulkDelete = async () => {
+        if (!confirm(`Are you sure you want to delete ${selectedClientIds.length} clients?`)) return;
+
+        let successCount = 0;
+        for (const id of selectedClientIds) {
+            try {
+                await api.deleteClient(id);
+                successCount++;
+            } catch (e) { console.error("Failed delete", id); }
+        }
+        setClients(clients.filter(c => !selectedClientIds.includes(c.id)));
+        setSelectedClientIds([]);
+        alert(`Deleted ${successCount} clients.`);
+    };
+
+    const toggleSelection = (id: string) => {
+        setSelectedClientIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
     if (viewMode === 'onboarding') {
-        return <ClientOnboardingWizard onBack={handleBack} onSave={handleSaveClient} defaultBranch={selectedBranch === BranchName.ALL ? BranchName.RAVULAPALEM : selectedBranch} />;
+        return <ClientOnboardingWizard
+            onBack={() => { setViewMode('directory'); setClientIdToEdit(undefined); }}
+            onSave={handleSaveClient}
+            defaultBranch={selectedBranch === BranchName.ALL ? BranchName.RAVULAPALEM : selectedBranch}
+            initialData={clientIdToEdit}
+        />;
     }
 
     if (viewMode === 'client_detail' && selectedClient) {
-        return <AdminClientDetailView client={selectedClient} onBack={handleBack} />;
+        return <AdminClientDetailView
+            client={selectedClient}
+            onBack={handleBack}
+            onEdit={() => { setClientIdToEdit(selectedClient); setViewMode('onboarding'); }}
+        />;
     }
 
     return (
@@ -149,6 +210,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                         <p className="text-slate-500 text-sm font-medium">Manage cross-branch portfolios and compliance engagements.</p>
                     </div>
                     <div className="flex gap-3">
+                        {selectedClientIds.length > 0 && (
+                            <button onClick={handleBulkDelete} className="flex items-center gap-2 px-4 py-3 bg-red-50 text-red-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-100 transition-all border border-red-100">
+                                <Trash2 size={16} /> Delete ({selectedClientIds.length})
+                            </button>
+                        )}
                         <ExcelImporter
                             templateName="Clients"
                             requiredColumns={['Name', 'Phone']}
@@ -158,7 +224,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                             <button onClick={() => setDirectoryViewType('grid')} className={`p-2 rounded-lg transition-all ${directoryViewType === 'grid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={20} /></button>
                             <button onClick={() => setDirectoryViewType('list')} className={`p-2 rounded-lg transition-all ${directoryViewType === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}><List size={20} /></button>
                         </div>
-                        <button onClick={() => setViewMode('onboarding')} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl transition-all active:scale-95"><UserPlus size={18} /> Onboard Client</button>
+                        <button onClick={() => { setClientIdToEdit(undefined); setViewMode('onboarding'); }} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl transition-all active:scale-95"><UserPlus size={18} /> Onboard Client</button>
                     </div>
                 </div>
 
@@ -215,11 +281,22 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                         <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden mb-20">
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 text-slate-700 font-black text-[10px] uppercase tracking-[0.2em] border-b border-slate-200">
-                                    <tr><th className="px-6 py-5">Entity</th><th className="px-6 py-5">Status</th><th className="px-6 py-5">Communication</th><th className="px-6 py-5">Branch</th><th className="px-6 py-5 text-right">Action</th></tr>
+                                    <tr>
+                                        <th className="px-6 py-5 w-10">
+                                            <div className="w-4 h-4 border-2 border-slate-300 rounded flex items-center justify-center cursor-pointer" onClick={() => setSelectedClientIds(selectedClientIds.length === filteredClients.length ? [] : filteredClients.map(c => c.id))}>
+                                                {selectedClientIds.length === filteredClients.length && selectedClientIds.length > 0 && <div className="w-2 h-2 bg-indigo-600 rounded-sm"></div>}
+                                            </div>
+                                        </th>
+                                        <th className="px-6 py-5">Entity</th><th className="px-6 py-5">Status</th><th className="px-6 py-5">Communication</th><th className="px-6 py-5">Branch</th><th className="px-6 py-5 text-right">Action</th></tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {filteredClients.map(client => (
-                                        <tr key={client.id} className="hover:bg-indigo-50/30 transition-colors group cursor-pointer" onClick={() => { setSelectedClient(client); setViewMode('client_detail'); }}>
+                                        <tr key={client.id} className={`hover:bg-indigo-50/30 transition-colors group cursor-pointer ${selectedClientIds.includes(client.id) ? 'bg-indigo-50/20' : ''}`} onClick={(e) => { if ((e.target as any).closest('.checkbox-area')) return; setSelectedClient(client); setViewMode('client_detail'); }}>
+                                            <td className="px-6 py-5 checkbox-area">
+                                                <div className="w-4 h-4 border-2 border-slate-300 rounded flex items-center justify-center cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleSelection(client.id); }}>
+                                                    {selectedClientIds.includes(client.id) && <div className="w-2 h-2 bg-indigo-600 rounded-sm"></div>}
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-5 flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white transition-all">{client.name.charAt(0)}</div><div><p className="font-black text-slate-800 text-base tracking-tight">{client.name}</p><p className="text-[10px] text-slate-400 font-black tracking-widest uppercase">{client.pan}</p></div></td>
                                             <td className="px-6 py-5"><span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${client.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-400'}`}>{client.status}</span></td>
                                             <td className="px-6 py-5"><div className="flex flex-col gap-0.5 text-xs text-slate-500 font-bold"><span>{client.phone}</span><span className="opacity-70 lowercase font-medium">{client.email}</span></div></td>
@@ -240,10 +317,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
     );
 };
 
-interface OnboardingProps { onBack: () => void; onSave: (client: Client) => void; defaultBranch: BranchName; }
-const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, defaultBranch }) => {
+interface OnboardingProps { onBack: () => void; onSave: (client: Client) => void; defaultBranch: BranchName; initialData?: Client; }
+const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, defaultBranch, initialData }) => {
     const [currentStep, setCurrentStep] = useState(1);
-    const [formData, setFormData] = useState<Partial<Client>>({
+    const [formData, setFormData] = useState<Partial<Client>>(initialData || {
         name: '', tradeName: '', group: '', type: 'Individual', branch: defaultBranch, status: 'Active',
         phone: '', email: '', pan: '', gstin: '', address: '', city: '',
         state: 'Andhra Pradesh', pincode: '', bankName: '', bankAccountNo: '', ifscCode: '',
@@ -385,44 +462,144 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
     );
 };
 
-const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void }> = ({ client, onBack }) => (
-    <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
-        <div className="p-6 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-4"><button onClick={onBack} className="p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl text-slate-500 transition-all"><ArrowLeft size={24} /></button><div><h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{client.name}</h1><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2">{client.id} • {client.branch} Operations Hub</p></div></div>
-            <div className="flex gap-3"><button className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white border border-transparent hover:border-slate-200 transition-all">Edit Record</button><button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">New Engagement</button></div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-10">
-            <div className="max-w-7xl mx-auto space-y-10">
-                <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-10">
-                    <div className="flex-1 space-y-8">
-                        <div className="flex items-center gap-8">
-                            <div className="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-indigo-100">{client.name.charAt(0)}</div>
-                            <div className="space-y-3">
-                                <div className="flex gap-2"><span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">{client.type} Constitution</span><span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100">Verified Identity</span></div>
-                                <div className="flex items-center gap-8 text-sm font-black text-slate-500 uppercase tracking-tight"><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Mail size={16} className="text-slate-400" /> {client.email}</span><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Phone size={16} className="text-slate-400" /> {client.phone}</span></div>
+const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEdit?: () => void, onNewEngagement?: () => void }> = ({ client, onBack, onEdit, onNewEngagement }) => {
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+
+    useEffect(() => {
+        const fetchRelated = async () => {
+            try {
+                const [t, p] = await Promise.all([api.getTasks(client.id), api.getProjects(client.id)]);
+                setTasks(t);
+                setProjects(p);
+            } catch (e) {
+                console.error("Failed to load client details", e);
+            }
+        };
+        fetchRelated();
+    }, [client.id]);
+
+    return (
+        <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
+            <div className="p-6 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-4"><button onClick={onBack} className="p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl text-slate-500 transition-all"><ArrowLeft size={24} /></button><div><h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{client.name}</h1><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2">{client.id} • {client.branch} Operations Hub</p></div></div>
+                <div className="flex gap-3">
+                    <button onClick={onEdit} className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white border border-transparent hover:border-slate-200 transition-all flex items-center gap-2"><Edit size={14} /> Edit Record</button>
+                    <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center gap-2"><Plus size={14} /> New Engagement</button>
+                </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-10">
+                <div className="max-w-7xl mx-auto space-y-10">
+                    <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-10">
+                        <div className="flex-1 space-y-8">
+                            <div className="flex items-center gap-8">
+                                <div className="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-indigo-100">{client.name.charAt(0)}</div>
+                                <div className="space-y-3">
+                                    <div className="flex gap-2"><span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">{client.type} Constitution</span><span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100">Verified Identity</span></div>
+                                    <div className="flex items-center gap-8 text-sm font-black text-slate-500 uppercase tracking-tight"><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Mail size={16} className="text-slate-400" /> {client.email}</span><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Phone size={16} className="text-slate-400" /> {client.phone}</span></div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-4 gap-8 pt-10 border-t border-slate-50">
+                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">PAN Identifier</p><p className="font-mono text-sm font-black text-slate-800">{client.pan}</p></div>
+                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">GST Entity</p><p className="font-mono text-sm font-black text-slate-800">{client.gstin || 'UNREGISTERED'}</p></div>
+                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Regional Branch</p><p className="font-black text-sm text-slate-800">{client.branch}</p></div>
+                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Assigned Lead</p><div className="flex items-center gap-2"><div className="w-6 h-6 bg-slate-900 rounded-lg flex items-center justify-center text-[10px] font-black text-white">S</div><span className="text-xs font-black text-slate-600">Suresh K</span></div></div>
                             </div>
                         </div>
-                        <div className="grid grid-cols-4 gap-8 pt-10 border-t border-slate-50">
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">PAN Identifier</p><p className="font-mono text-sm font-black text-slate-800">{client.pan}</p></div>
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">GST Entity</p><p className="font-mono text-sm font-black text-slate-800">{client.gstin || 'UNREGISTERED'}</p></div>
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Regional Branch</p><p className="font-black text-sm text-slate-800">{client.branch}</p></div>
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Assigned Lead</p><div className="flex items-center gap-2"><div className="w-6 h-6 bg-slate-900 rounded-lg flex items-center justify-center text-[10px] font-black text-white">S</div><span className="text-xs font-black text-slate-600">Suresh K</span></div></div>
-                        </div>
                     </div>
-                </div>
-                <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm">
-                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-8"><Info size={20} className="text-indigo-600" /> Supplementary Data</h3>
-                    <div className="grid grid-cols-3 gap-10">
-                        <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Group Affiliation</p><p className="font-black text-slate-700">{client.group || 'Stand-alone'}</p></div>
-                        <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Internal Reference</p><p className="font-black text-slate-700">{client.fileNumber || 'Pending Assignment'}</p></div>
-                        <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Source Referral</p><p className="font-black text-slate-700">{client.referBy || 'Direct'}</p></div>
-                        <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">DOB / Foundation</p><p className="font-black text-slate-700">{client.dob || 'Not Disclosed'}</p></div>
-                        <div className="col-span-2"><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Registered Address</p><p className="font-bold text-slate-700">{client.address}, {client.city}, {client.state} - {client.pincode}</p></div>
+
+                    {/* Associated Projects Section */}
+                    {projects.length > 0 && (
+                        <div className="space-y-6">
+                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3"><Briefcase size={20} className="text-indigo-600" /> Active Projects</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {projects.map(p => (
+                                    <div key={p.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                                        <h4 className="font-black text-slate-800 text-lg mb-1">{p.name}</h4>
+                                        <span className="text-[10px] uppercase font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg">{p.status}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Associated Tasks Section */}
+                    {tasks.length > 0 && (
+                        <div className="space-y-6">
+                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3"><List size={20} className="text-indigo-600" /> Workflow Tasks</h3>
+                            <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
+                                        <tr><th className="px-6 py-4">Service</th><th className="px-6 py-4">Status</th><th className="px-6 py-4">Due Date</th><th className="px-6 py-4">Assignee</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {tasks.map(t => (
+                                            <tr key={t.id} className="hover:bg-slate-50">
+                                                <td className="px-6 py-4 font-bold text-slate-700">{t.serviceType}</td>
+                                                <td className="px-6 py-4"><span className="text-[10px] font-black uppercase bg-slate-100 text-slate-500 px-2 py-1 rounded">{t.status}</span></td>
+                                                <td className="px-6 py-4 font-mono text-xs font-bold text-slate-600">{t.dueDate}</td>
+                                                <td className="px-6 py-4 text-xs font-bold text-slate-600">{t.assignedTo}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm">
+                        <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-8"><Info size={20} className="text-indigo-600" /> Supplementary Data</h3>
+                        <div className="grid grid-cols-3 gap-10">
+                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Group Affiliation</p><p className="font-black text-slate-700">{client.group || 'Stand-alone'}</p></div>
+                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Internal Reference</p><p className="font-black text-slate-700">{client.fileNumber || 'Pending Assignment'}</p></div>
+                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Source Referral</p><p className="font-black text-slate-700">{client.referBy || 'Direct'}</p></div>
+                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">DOB / Foundation</p><p className="font-black text-slate-700">{client.dob || 'Not Disclosed'}</p></div>
+                            <div className="col-span-2"><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Registered Address</p><p className="font-bold text-slate-700">{client.address}, {client.city}, {client.state} - {client.pincode}</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
+
+const NewEngagementModal: React.FC<{ clientName: string, onClose: () => void, onSave: (data: any) => void }> = ({ clientName, onClose, onSave }) => {
+    const [serviceType, setServiceType] = useState('Income Tax Filing');
+    const [dueDate, setDueDate] = useState('');
+    const [priority, setPriority] = useState('Medium');
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                <h3 className="text-lg font-black text-slate-800 mb-1">New Engagement</h3>
+                <p className="text-xs text-slate-500 font-bold mb-6 uppercase tracking-wider">For {clientName}</p>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Service Type</label>
+                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={serviceType} onChange={e => setServiceType(e.target.value)}>
+                            {SERVICE_TYPES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Due Date</label>
+                        <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
+                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
+                            <option>Low</option><option>Medium</option><option>High</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <button onClick={onClose} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                    <button onClick={() => onSave({ serviceType, dueDate, priority })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Create Task</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default ClientManager;

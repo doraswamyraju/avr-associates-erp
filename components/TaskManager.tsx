@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
 import { MOCK_STAFF } from '../constants';
-import { BranchName, TaskStatus, Task, Priority, UserRole, User, Project, ProjectStatus, TimeLogEntry } from '../types';
+import { BranchName, TaskStatus, Task, Priority, UserRole, User, Project, ProjectStatus, TimeLogEntry, Client } from '../types';
 import { StatusBadge } from './Dashboard';
 import { api } from '../src/services/api';
 import {
@@ -26,6 +26,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
     const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
     const [assigneeFilter, setAssigneeFilter] = useState<string | null>(preSelectedAssignee || null);
     const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
@@ -37,12 +38,14 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
         const loadData = async () => {
             setLoading(true);
             try {
-                const [tasksData, projectsData] = await Promise.all([
+                const [tasksData, projectsData, clientsData] = await Promise.all([
                     api.getTasks(),
-                    api.getProjects()
+                    api.getProjects(),
+                    api.getClients()
                 ]);
                 setTasks(tasksData);
                 setProjects(projectsData);
+                setClients(clientsData);
             } catch (error) {
                 console.error("Failed to fetch data", error);
             } finally {
@@ -62,30 +65,44 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
 
     const handleImportTasks = async (data: any[]) => {
         let successCount = 0;
+        const newTasks: Task[] = [];
+
         for (const row of data) {
-            const newTask: Partial<Task> = {
-                clientName: row['Client'] || row['client'],
-                serviceType: row['Service'] || row['service'],
-                dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
-                status: TaskStatus.NEW,
-                priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
-                assignedTo: row['Assignee'] || row['assignee'] || '',
-                branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName
-            };
-            // In real app, post to API
-            // For now, we mock it by adding to local state
-            if (newTask.clientName) {
-                // Mock ID generation
-                const t: Task = {
-                    ...newTask,
-                    id: `TSK-${Math.floor(Math.random() * 10000)}`,
-                    clientId: 'UNK', projectId: 'UNK', period: 'FY23-24', slaProgress: 0, totalTrackedMinutes: 0
-                } as Task;
-                setTasks(prev => [t, ...prev]);
-                successCount++;
+            const clientName = row['Client'] || row['client'];
+            // Find client ID by name (case-insensitive)
+            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').toLowerCase());
+
+            if (clientName && matchedClient) {
+                const newTask: Partial<Task> = {
+                    clientName: matchedClient.name,
+                    clientId: matchedClient.id,
+                    serviceType: row['Service'] || row['service'] || 'General Advisory',
+                    dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
+                    status: TaskStatus.NEW,
+                    priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
+                    assignedTo: row['Assignee'] || row['assignee'] || '',
+                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                    period: row['Period'] || row['period'] || 'FY24-25',
+                    slaProgress: 0,
+                    totalTrackedMinutes: 0
+                };
+
+                try {
+                    const created = await api.createTask(newTask as any);
+                    newTasks.push(created);
+                    successCount++;
+                } catch (e) {
+                    console.error("Failed to create task", e);
+                }
             }
         }
-        alert(`Calculated ${successCount} new tasks from import.`);
+
+        if (newTasks.length > 0) {
+            setTasks(prev => [...newTasks, ...prev]);
+            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
+        } else {
+            alert("No matching clients found for import. Ensure Client names match exactly.");
+        }
     };
 
     const getProjectProgress = (projectId: string) => {

@@ -22,6 +22,25 @@ export const api = {
         return response.json();
     },
 
+    updateClient: async (client: Client): Promise<Client> => {
+        const response = await fetch(`${API_BASE_URL}/clients.php`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(client)
+        });
+        if (!response.ok) throw new Error('Failed to update client');
+        // Return updated client or just success
+        return client;
+    },
+
+    deleteClient: async (id: string): Promise<void> => {
+        const response = await fetch(`${API_BASE_URL}/clients.php?id=${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete client');
+        return response.json();
+    },
+
     // Projects
     getProjects: async (clientId?: string): Promise<Project[]> => {
         const url = clientId
