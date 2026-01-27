@@ -11,10 +11,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 }
 
 $host = 'localhost';
-$db   = 'avr_erp_db';
-$user = 'root'; // Default XAMPP user
-$pass = '';     // Default XAMPP password
 $charset = 'utf8mb4';
+
+// Environment Detection
+if ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1') {
+    // Local Development
+    $db   = 'avr_erp_db';
+    $user = 'root'; 
+    $pass = '';     
+} else {
+    // Production (Hostinger VPS)
+    // You should create a 'db_production_config.php' on the server with these variables
+    // OR set them here if you don't plan to commit this file often.
+    // For automatic deployment safety, we'll try to include a config file first.
+    
+    if (file_exists(__DIR__ . '/../db_production_config.php')) {
+        include __DIR__ . '/../db_production_config.php';
+    } else {
+        // Fallback / Placeholder - CHANGE THESE ON SERVER or use the config file approach
+        $db   = 'u123456789_avr_erp'; 
+        $user = 'u123456789_avr_user'; 
+        $pass = 'YOUR_DB_PASSWORD';   
+    }
+}
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 $options = [
