@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS clients (
     bank_account_no VARCHAR(50),
     bank_name VARCHAR(100),
     ifsc_code VARCHAR(20),
-    refer_by VARCHAR(100)
+    refer_by VARCHAR(100),
+    service_details JSON
 );
 
 -- Projects Table

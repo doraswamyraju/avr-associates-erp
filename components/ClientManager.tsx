@@ -66,8 +66,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
 
     const filteredClients = clients.filter(client => {
         const matchesBranch = selectedBranch === BranchName.ALL || client.branch === selectedBranch;
-        const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            client.pan.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (client.pan || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         if (selectedServiceFilter !== 'All') {
             if (selectedServiceFilter === 'ROC') {
@@ -325,7 +325,7 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
         name: '', tradeName: '', group: '', type: 'Individual', branch: defaultBranch, status: 'Active',
         phone: '', email: '', pan: '', gstin: '', address: '', city: '',
         state: 'Andhra Pradesh', pincode: '', bankName: '', bankAccountNo: '', ifscCode: '',
-        fileNumber: '', dob: '', referBy: '', selectedServices: []
+        fileNumber: '', dob: '', referBy: '', selectedServices: [], serviceDetails: {}
     });
 
     const steps = [{ id: 1, title: 'Identity', icon: User }, { id: 2, title: 'Contact', icon: MapPin }, { id: 3, title: 'Statutory', icon: Landmark }, { id: 4, title: 'Activation', icon: Briefcase }];
@@ -335,6 +335,133 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
         const current = formData.selectedServices || [];
         updateField('selectedServices', current.includes(service) ? current.filter(s => s !== service) : [...current, service]);
     };
+
+    const updateServiceDetail = (service: string, field: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            serviceDetails: {
+                ...prev.serviceDetails,
+                [service]: {
+                    ...(prev.serviceDetails?.[service] || {}),
+                    [field]: value
+                }
+            }
+        }));
+    };
+
+    const renderServiceDetails = (service: string) => {
+        const details = formData.serviceDetails?.[service] || {};
+
+        const renderInput = (label: string, field: string, placeholder?: string, type: string = 'text') => (
+            <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">{label}</label>
+                <input
+                    type={type}
+                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                    value={details[field] || ''}
+                    onChange={e => updateServiceDetail(service, field, e.target.value)}
+                    placeholder={placeholder}
+                />
+            </div>
+        );
+
+        return (
+            <div className="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="flex justify-between items-center mb-6">
+                    <h5 className="font-black text-slate-800 text-lg flex items-center gap-2"><Briefcase size={18} className="text-indigo-600" /> {service} Details</h5>
+                    <button className="px-4 py-2 bg-sky-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-sky-600 transition-colors shadow-lg active:scale-95">Click Link</button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {service === 'INCOME TAX' && (
+                        <>
+                            {renderInput('IT Password', 'password', 'Enter ITR Password', 'password')}
+                            {renderInput('Mail ID', 'mailId', 'Linked Mail ID')}
+                            <div className="col-span-2">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1 mb-2 block">ITR Type</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Form 16', 'ITR 1', 'ITR 2', 'ITR 3', 'ITR 4', 'ITR 5', 'ITR 6', 'ITR 7'].map(type => (
+                                        <button
+                                            key={type}
+                                            onClick={() => updateServiceDetail(service, 'itrType', type)}
+                                            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider border transition-all ${details.itrType === type ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300'}`}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {(service === 'GST-composition' || service === 'GST-non-composition' || service.includes('GST')) && (
+                        <>
+                            {renderInput('GST No', 'gstNo', 'Enter GST No')}
+                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                            {renderInput('User ID', 'userId', 'Enter GST User ID')}
+                            {renderInput('Password', 'password', 'Enter GST Password', 'password')}
+                        </>
+                    )}
+
+                    {service === 'TDS' && (
+                        <>
+                            {renderInput('TAN Number', 'tan', 'Enter TAN')}
+                            {renderInput('TDS UserID', 'userId', 'Enter TDS User ID')}
+                            {renderInput('TDS Password', 'password', 'Enter TDS Password', 'password')}
+                            {renderInput('AIN Number', 'ain', 'Enter AIN Num')}
+                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                        </>
+                    )}
+
+                    {service === 'Food Licence' && (
+                        <>
+                            {renderInput('User ID', 'userId', 'Enter Food User ID')}
+                            {renderInput('Password', 'password', 'Enter Food Password', 'password')}
+                            {renderInput('REG Mail ID', 'regMailId', 'Enter Email ID')}
+                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                        </>
+                    )}
+
+                    {service === 'MSME' && (
+                        <>
+                            {renderInput('Reg No', 'regNo', 'Enter Reg No')}
+                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                        </>
+                    )}
+
+                    {service === 'Labour' && (
+                        <>
+                            {renderInput('Reg No', 'regNo', 'Enter Reg No')}
+                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                            {renderInput('Password', 'password', 'Enter Password', 'password')}
+                        </>
+                    )}
+
+                    {service === 'PF AND ESI' && (
+                        <>
+                            {renderInput('PF UserID', 'pfUserId', 'Enter PF User ID')}
+                            {renderInput('PF Password', 'pfPassword', 'Enter PF Password', 'password')}
+                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                        </>
+                    )}
+
+                    {service === 'Others' && (
+                        <>
+                            <div className="col-span-2">
+                                {renderInput('Details', 'description', 'Enter other service details...')}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+
 
     const handleNext = () => currentStep < 4 ? setCurrentStep(currentStep + 1) : onSave({ id: 'C' + Math.random().toString().slice(2, 6), ...(formData as Client) });
 

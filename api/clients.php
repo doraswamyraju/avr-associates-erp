@@ -24,7 +24,7 @@ switch ($method) {
                 trade_name = :trade_name, dob = :dob, address = :address, city = :city, 
                 pincode = :pincode, state = :state, file_number = :file_number, 
                 bank_account_no = :bank_account_no, bank_name = :bank_name, 
-                ifsc_code = :ifsc_code, refer_by = :refer_by
+                ifsc_code = :ifsc_code, refer_by = :refer_by, service_details = :service_details
                 WHERE id = :id";
         
         $stmt = $pdo->prepare($sql);
@@ -50,7 +50,8 @@ switch ($method) {
                 ':bank_account_no' => $data['bankAccountNo'] ?? null,
                 ':bank_name' => $data['bankName'] ?? null,
                 ':ifsc_code' => $data['ifscCode'] ?? null,
-                ':refer_by' => $data['referBy'] ?? null
+                ':refer_by' => $data['referBy'] ?? null,
+                ':service_details' => isset($data['serviceDetails']) ? json_encode($data['serviceDetails']) : null
             ]);
             echo json_encode(['message' => 'Client updated']);
         } catch (PDOException $e) {
@@ -62,8 +63,8 @@ switch ($method) {
     case 'POST':
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $sql = "INSERT INTO clients (id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by) 
-                VALUES (:id, :name, :pan, :gstin, :type, :branch, :phone, :email, :status, :group_name, :trade_name, :dob, :address, :city, :pincode, :state, :file_number, :bank_account_no, :bank_name, :ifsc_code, :refer_by)";
+        $sql = "INSERT INTO clients (id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by, service_details) 
+                VALUES (:id, :name, :pan, :gstin, :type, :branch, :phone, :email, :status, :group_name, :trade_name, :dob, :address, :city, :pincode, :state, :file_number, :bank_account_no, :bank_name, :ifsc_code, :refer_by, :service_details)";
         
         $stmt = $pdo->prepare($sql);
         
@@ -94,7 +95,8 @@ switch ($method) {
                 ':bank_account_no' => $data['bankAccountNo'] ?? null,
                 ':bank_name' => $data['bankName'] ?? null,
                 ':ifsc_code' => $data['ifscCode'] ?? null,
-                ':refer_by' => $data['referBy'] ?? null
+                ':refer_by' => $data['referBy'] ?? null,
+                ':service_details' => isset($data['serviceDetails']) ? json_encode($data['serviceDetails']) : null
             ]);
             echo json_encode(['message' => 'Client created', 'id' => $data['id']]);
         } catch (PDOException $e) {
