@@ -65,15 +65,15 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
 
     const handleImportTasks = async (data: any[]) => {
         let successCount = 0;
-        const newTasks: Task[] = [];
+        const newTasks: Partial<Task>[] = [];
 
+        // 1. Prepare data
         for (const row of data) {
             const clientName = row['Client Name'] || row['Client'] || row['client'];
-            // Find client ID by name (case-insensitive)
             const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
 
             if (clientName && matchedClient) {
-                const newTask: Partial<Task> = {
+                newTasks.push({
                     clientName: matchedClient.name,
                     clientId: matchedClient.id,
                     serviceType: row['Service'] || row['service'] || 'General Advisory',
@@ -85,23 +85,38 @@ const TaskManager: React.FC<TaskManagerProps> = ({ selectedBranch, currentUser, 
                     period: row['Period'] || row['period'] || 'FY24-25',
                     slaProgress: 0,
                     totalTrackedMinutes: 0
-                };
-
-                try {
-                    const created = await api.createTask(newTask as any);
-                    newTasks.push(created);
-                    successCount++;
-                } catch (e) {
-                    console.error("Failed to create task", e);
-                }
+                });
             }
         }
 
-        if (newTasks.length > 0) {
-            setTasks(prev => [...newTasks, ...prev]);
-            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
-        } else {
+        if (newTasks.length === 0) {
             alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
+            return;
+        }
+
+        // 2. Batch process
+        const BATCH_SIZE = 500;
+        const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
+
+        // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
+        // Ideally use a loading state, but for quick fix:
+        console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
+
+        try {
+            for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
+                const batch = newTasks.slice(i, i + BATCH_SIZE);
+                await api.createTasksBatch(batch as any);
+                successCount += batch.length;
+                console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+            }
+
+            // Refresh tasks
+            const updatedTasks = await api.getTasks();
+            setTasks(updatedTasks);
+            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
+        } catch (e: any) {
+            console.error("Batch import failed", e);
+            alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
         }
     };
 

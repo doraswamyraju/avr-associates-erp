@@ -24,34 +24,57 @@ switch ($method) {
         break;
 
     case 'POST':
-        $data = json_decode(file_get_contents('php://input'), true);
+        $input = json_decode(file_get_contents('php://input'), true);
         
-        $sql = "INSERT INTO tasks (id, client_id, project_id, service_type, period, due_date, status, assigned_to, priority, branch, sla_progress, total_tracked_minutes) 
-                VALUES (:id, :client_id, :project_id, :service_type, :period, :due_date, :status, :assigned_to, :priority, :branch, :sla_progress, :total_tracked_minutes)";
+        // Determine if batch or single
+        $isBatch = isset($input[0]);
+        $tasksData = $isBatch ? $input : [$input];
         
-        $stmt = $pdo->prepare($sql);
+        $responseIds = [];
+        $errors = [];
         
-        if (!isset($data['id'])) {
-            $data['id'] = 'T' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-        }
-
+        // Transaction for batch
+        $pdo->beginTransaction();
+        
         try {
-            $stmt->execute([
-                ':id' => $data['id'],
-                ':client_id' => $data['clientId'],
-                ':project_id' => $data['projectId'] ?? null,
-                ':service_type' => $data['serviceType'] ?? null,
-                ':period' => $data['period'] ?? null,
-                ':due_date' => $data['dueDate'] ?? null,
-                ':status' => $data['status'] ?? 'New',
-                ':assigned_to' => $data['assignedTo'] ?? null,
-                ':priority' => $data['priority'] ?? 'Medium',
-                ':branch' => $data['branch'] ?? 'Ravulapalem',
-                ':sla_progress' => $data['slaProgress'] ?? 0,
-                ':total_tracked_minutes' => $data['totalTrackedMinutes'] ?? 0
-            ]);
-            echo json_encode(['message' => 'Task created', 'id' => $data['id']]);
-        } catch (PDOException $e) {
+            $sql = "INSERT INTO tasks (id, client_id, project_id, service_type, period, due_date, status, assigned_to, priority, branch, sla_progress, total_tracked_minutes) 
+                    VALUES (:id, :client_id, :project_id, :service_type, :period, :due_date, :status, :assigned_to, :priority, :branch, :sla_progress, :total_tracked_minutes)";
+            $stmt = $pdo->prepare($sql);
+
+            foreach ($tasksData as $data) {
+                // Generate robust unique ID: T_timestamp_random
+                if (!isset($data['id'])) {
+                    $data['id'] = 'T_' . uniqid() . '_' . mt_rand(100, 999);
+                }
+
+                try {
+                    $stmt->execute([
+                        ':id' => $data['id'],
+                        ':client_id' => $data['clientId'],
+                        ':project_id' => $data['projectId'] ?? null,
+                        ':service_type' => $data['serviceType'] ?? null,
+                        ':period' => $data['period'] ?? null,
+                        ':due_date' => $data['dueDate'] ?? null,
+                        ':status' => $data['status'] ?? 'New',
+                        ':assigned_to' => $data['assignedTo'] ?? null,
+                        ':priority' => $data['priority'] ?? 'Medium',
+                        ':branch' => $data['branch'] ?? 'Ravulapalem',
+                        ':sla_progress' => $data['slaProgress'] ?? 0,
+                        ':total_tracked_minutes' => $data['totalTrackedMinutes'] ?? 0
+                    ]);
+                    $responseIds[] = $data['id'];
+                } catch (PDOException $e) {
+                    // Collect errors but try to continue if possible, or just fail batch?
+                    // For now, fail hard on batch to ensure integrity or log error
+                    throw $e;
+                }
+            }
+            
+            $pdo->commit();
+            echo json_encode(['message' => 'Tasks created', 'ids' => $responseIds, 'count' => count($responseIds)]);
+            
+        } catch (Exception $e) {
+            $pdo->rollBack();
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);
         }

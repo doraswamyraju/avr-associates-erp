@@ -81,6 +81,16 @@ export const api = {
         return response.json();
     },
 
+    createTasksBatch: async (tasks: Omit<Task, 'id'>[]): Promise<{ count: number, ids: string[] }> => {
+        const response = await fetch(`${API_BASE_URL}/tasks.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(tasks)
+        });
+        if (!response.ok) throw new Error('Failed to create tasks batch');
+        return response.json();
+    },
+
     // Invoices
     getInvoices: async (): Promise<Invoice[]> => {
         const response = await fetch(`${API_BASE_URL}/invoices.php`);
