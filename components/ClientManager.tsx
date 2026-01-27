@@ -466,6 +466,7 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
 const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEdit?: () => void, onNewEngagement?: () => void }> = ({ client, onBack, onEdit, onNewEngagement }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
+    const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'profile'>('overview');
 
     useEffect(() => {
         const fetchRelated = async () => {
@@ -480,84 +481,165 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
         fetchRelated();
     }, [client.id]);
 
+    const tabs = [
+        { id: 'overview', label: 'Overview', icon: LayoutGrid },
+        { id: 'projects', label: 'Projects', icon: Briefcase, count: projects.length },
+        { id: 'tasks', label: 'Workflow', icon: List, count: tasks.length },
+        { id: 'profile', label: 'Profile Data', icon: User },
+    ];
+
     return (
         <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
-            <div className="p-6 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
-                <div className="flex items-center gap-4"><button onClick={onBack} className="p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl text-slate-500 transition-all"><ArrowLeft size={24} /></button><div><h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{client.name}</h1><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2">{client.id} • {client.branch} Operations Hub</p></div></div>
-                <div className="flex gap-3">
-                    <button onClick={onEdit} className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white border border-transparent hover:border-slate-200 transition-all flex items-center gap-2"><Edit size={14} /> Edit Record</button>
-                    <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center gap-2"><Plus size={14} /> New Engagement</button>
+            {/* Header */}
+            <div className="bg-white border-b border-slate-200 flex flex-col shrink-0">
+                <div className="p-6 flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                        <button onClick={onBack} className="p-3 hover:bg-slate-50 border border-slate-100 rounded-2xl text-slate-500 transition-all"><ArrowLeft size={24} /></button>
+                        <div>
+                            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">{client.name}</h1>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-2">{client.id} • {client.branch} Operations Hub</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={onEdit} className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white border border-transparent hover:border-slate-200 transition-all flex items-center gap-2"><Edit size={14} /> Edit Record</button>
+                        <button onClick={onNewEngagement} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center gap-2"><Plus size={14} /> New Engagement</button>
+                    </div>
+                </div>
+
+                {/* Tabs */}
+                <div className="px-6 flex gap-6 overflow-x-auto hide-scrollbar">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`pb-4 border-b-4 text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                        >
+                            <tab.icon size={16} /> {tab.label}
+                            {tab.count !== undefined && <span className={`px-2 py-0.5 rounded-md text-[9px] ${activeTab === tab.id ? 'bg-indigo-50' : 'bg-slate-100'}`}>{tab.count}</span>}
+                        </button>
+                    ))}
                 </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-10">
+
+            <div className="flex-1 overflow-y-auto p-10 bg-slate-50">
                 <div className="max-w-7xl mx-auto space-y-10">
-                    <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-10">
-                        <div className="flex-1 space-y-8">
-                            <div className="flex items-center gap-8">
-                                <div className="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-indigo-100">{client.name.charAt(0)}</div>
-                                <div className="space-y-3">
-                                    <div className="flex gap-2"><span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">{client.type} Constitution</span><span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100">Verified Identity</span></div>
-                                    <div className="flex items-center gap-8 text-sm font-black text-slate-500 uppercase tracking-tight"><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Mail size={16} className="text-slate-400" /> {client.email}</span><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Phone size={16} className="text-slate-400" /> {client.phone}</span></div>
+
+                    {activeTab === 'overview' && (
+                        <div className="animate-in fade-in zoom-in-95 duration-200 space-y-10">
+                            <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm flex flex-col lg:flex-row gap-10">
+                                <div className="flex-1 space-y-8">
+                                    <div className="flex items-center gap-8">
+                                        <div className="w-24 h-24 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-indigo-100">{client.name.charAt(0)}</div>
+                                        <div className="space-y-3">
+                                            <div className="flex gap-2"><span className="px-4 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">{client.type} Constitution</span><span className="px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100">Verified Identity</span></div>
+                                            <div className="flex items-center gap-8 text-sm font-black text-slate-500 uppercase tracking-tight"><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Mail size={16} className="text-slate-400" /> {client.email}</span><span className="flex items-center gap-2 hover:text-indigo-600 transition-colors cursor-pointer"><Phone size={16} className="text-slate-400" /> {client.phone}</span></div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-8 pt-10 border-t border-slate-50">
+                                        <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">PAN Identifier</p><p className="font-mono text-sm font-black text-slate-800">{client.pan}</p></div>
+                                        <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">GST Entity</p><p className="font-mono text-sm font-black text-slate-800">{client.gstin || 'UNREGISTERED'}</p></div>
+                                        <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Regional Branch</p><p className="font-black text-sm text-slate-800">{client.branch}</p></div>
+                                        <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Assigned Lead</p><div className="flex items-center gap-2"><div className="w-6 h-6 bg-slate-900 rounded-lg flex items-center justify-center text-[10px] font-black text-white">S</div><span className="text-xs font-black text-slate-600">Suresh K</span></div></div>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-4 gap-8 pt-10 border-t border-slate-50">
-                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">PAN Identifier</p><p className="font-mono text-sm font-black text-slate-800">{client.pan}</p></div>
-                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">GST Entity</p><p className="font-mono text-sm font-black text-slate-800">{client.gstin || 'UNREGISTERED'}</p></div>
-                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Regional Branch</p><p className="font-black text-sm text-slate-800">{client.branch}</p></div>
-                                <div><p className="text-[10px] uppercase text-slate-400 font-black tracking-widest mb-1">Assigned Lead</p><div className="flex items-center gap-2"><div className="w-6 h-6 bg-slate-900 rounded-lg flex items-center justify-center text-[10px] font-black text-white">S</div><span className="text-xs font-black text-slate-600">Suresh K</span></div></div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Associated Projects Section */}
-                    {projects.length > 0 && (
-                        <div className="space-y-6">
-                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3"><Briefcase size={20} className="text-indigo-600" /> Active Projects</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {projects.map(p => (
-                                    <div key={p.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
-                                        <h4 className="font-black text-slate-800 text-lg mb-1">{p.name}</h4>
-                                        <span className="text-[10px] uppercase font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg">{p.status}</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="bg-indigo-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
+                                    <div className="relative z-10">
+                                        <Briefcase className="w-10 h-10 text-indigo-300 mb-4" />
+                                        <h3 className="text-3xl font-black mb-1">{projects.length}</h3>
+                                        <p className="text-[10px] uppercase tracking-widest text-indigo-300">Active Engagements</p>
                                     </div>
-                                ))}
+                                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
+                                </div>
+                                <div className="bg-emerald-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
+                                    <div className="relative z-10">
+                                        <List className="w-10 h-10 text-emerald-300 mb-4" />
+                                        <h3 className="text-3xl font-black mb-1">{tasks.filter(t => t.status !== 'Completed').length}</h3>
+                                        <p className="text-[10px] uppercase tracking-widest text-emerald-300">Pending Tasks</p>
+                                    </div>
+                                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-emerald-400 rounded-full blur-3xl opacity-20"></div>
+                                </div>
                             </div>
                         </div>
                     )}
 
-                    {/* Associated Tasks Section */}
-                    {tasks.length > 0 && (
-                        <div className="space-y-6">
-                            <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3"><List size={20} className="text-indigo-600" /> Workflow Tasks</h3>
-                            <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
-                                        <tr><th className="px-6 py-4">Service</th><th className="px-6 py-4">Status</th><th className="px-6 py-4">Due Date</th><th className="px-6 py-4">Assignee</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {tasks.map(t => (
-                                            <tr key={t.id} className="hover:bg-slate-50">
-                                                <td className="px-6 py-4 font-bold text-slate-700">{t.serviceType}</td>
-                                                <td className="px-6 py-4"><span className="text-[10px] font-black uppercase bg-slate-100 text-slate-500 px-2 py-1 rounded">{t.status}</span></td>
-                                                <td className="px-6 py-4 font-mono text-xs font-bold text-slate-600">{t.dueDate}</td>
-                                                <td className="px-6 py-4 text-xs font-bold text-slate-600">{t.assignedTo}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                    {activeTab === 'projects' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+                            {projects.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {projects.map(p => (
+                                        <div key={p.id} className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600"><Briefcase size={20} /></div>
+                                                <span className="text-[10px] uppercase font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg">{p.status}</span>
+                                            </div>
+                                            <h4 className="font-black text-slate-800 text-xl mb-2">{p.name}</h4>
+                                            <p className="text-sm text-slate-500 mb-4 line-clamp-2">{p.description || 'No description provided.'}</p>
+                                            <div className="pt-4 border-t border-slate-50 flex justify-between items-center text-xs font-bold text-slate-400">
+                                                <span>Budget: ₹{p.budget?.toLocaleString() || '0'}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">
+                                    <Briefcase size={48} className="mx-auto text-slate-200 mb-4" />
+                                    <p className="text-slate-400 font-bold">No active projects linked to this client.</p>
+                                    <button onClick={onNewEngagement} className="mt-4 text-indigo-600 font-black text-xs uppercase tracking-widest hover:underline">Create First Engagement</button>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm">
-                        <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-8"><Info size={20} className="text-indigo-600" /> Supplementary Data</h3>
-                        <div className="grid grid-cols-3 gap-10">
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Group Affiliation</p><p className="font-black text-slate-700">{client.group || 'Stand-alone'}</p></div>
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Internal Reference</p><p className="font-black text-slate-700">{client.fileNumber || 'Pending Assignment'}</p></div>
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Source Referral</p><p className="font-black text-slate-700">{client.referBy || 'Direct'}</p></div>
-                            <div><p className="text-[10px] uppercase text-slate-400 font-black mb-1">DOB / Foundation</p><p className="font-black text-slate-700">{client.dob || 'Not Disclosed'}</p></div>
-                            <div className="col-span-2"><p className="text-[10px] uppercase text-slate-400 font-black mb-1">Registered Address</p><p className="font-bold text-slate-700">{client.address}, {client.city}, {client.state} - {client.pincode}</p></div>
+                    {activeTab === 'tasks' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+                            {tasks.length > 0 ? (
+                                <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
+                                            <tr><th className="px-8 py-5">Service</th><th className="px-8 py-5">Status</th><th className="px-8 py-5">Due Date</th><th className="px-8 py-5">Assignee</th><th className="px-8 py-5 text-right">Priority</th></tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {tasks.map(t => (
+                                                <tr key={t.id} className="hover:bg-indigo-50/30 transition-colors">
+                                                    <td className="px-8 py-6 font-bold text-slate-800"><div className="flex items-center gap-3"><div className={`w-2 h-2 rounded-full ${t.status === 'Completed' ? 'bg-emerald-500' : 'bg-indigo-500'}`}></div>{t.serviceType}</div></td>
+                                                    <td className="px-8 py-6"><span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl ${t.status === 'New' ? 'bg-blue-50 text-blue-600' : t.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>{t.status}</span></td>
+                                                    <td className="px-8 py-6 font-mono text-xs font-bold text-slate-600 flex items-center gap-2"><Calendar size={14} className="text-slate-300" /> {t.dueDate}</td>
+                                                    <td className="px-8 py-6 text-xs font-bold text-slate-600">
+                                                        {t.assignedTo ? <div className="flex items-center gap-2"><div className="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-black">{t.assignedTo.charAt(0)}</div>{t.assignedTo}</div> : <span className="text-slate-400 italic">Unassigned</span>}
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right"><span className={`text-[10px] font-black uppercase tracking-wider ${t.priority === 'High' ? 'text-red-500' : 'text-slate-400'}`}>{t.priority}</span></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">
+                                    <List size={48} className="mx-auto text-slate-200 mb-4" />
+                                    <p className="text-slate-400 font-bold">No workflow tasks pending.</p>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
+
+                    {activeTab === 'profile' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+                            <div className="bg-white rounded-[3rem] p-10 border border-slate-200 shadow-sm">
+                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-10"><Info size={20} className="text-indigo-600" /> Supplementary Data</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                                    <div><p className="text-[10px] uppercase text-slate-400 font-black mb-2 tracking-widest">Group Affiliation</p><p className="font-black text-slate-800 text-lg">{client.group || 'Stand-alone'}</p></div>
+                                    <div><p className="text-[10px] uppercase text-slate-400 font-black mb-2 tracking-widest">Internal Reference</p><p className="font-black text-slate-800 text-lg font-mono">{client.fileNumber || 'Pending'}</p></div>
+                                    <div><p className="text-[10px] uppercase text-slate-400 font-black mb-2 tracking-widest">Source Referral</p><p className="font-black text-slate-800 text-lg">{client.referBy || 'Direct'}</p></div>
+                                    <div><p className="text-[10px] uppercase text-slate-400 font-black mb-2 tracking-widest">Date of Birth / Inc.</p><p className="font-black text-slate-800 text-lg">{client.dob || 'Not Disclosed'}</p></div>
+                                    <div><p className="text-[10px] uppercase text-slate-400 font-black mb-2 tracking-widest">Banking Profile</p><p className="font-black text-slate-800 text-lg">{client.bankName || 'Not Linked'}</p><p className="text-xs font-mono font-bold text-slate-400 mt-1">{client.bankAccountNo}</p></div>
+                                    <div className="col-span-1 lg:col-span-3 bg-slate-50 p-6 rounded-2xl border border-slate-100"><p className="text-[10px] uppercase text-slate-400 font-black mb-2 tracking-widest">Registered Address</p><p className="font-bold text-slate-700 leading-relaxed">{client.address}<br />{client.city}, {client.state} - {client.pincode}</p></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
