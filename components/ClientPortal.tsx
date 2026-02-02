@@ -1,14 +1,15 @@
 
-import React, { useState } from 'react';
-import { 
-    LayoutDashboard, FileText, Briefcase, CreditCard, User, LogOut, 
-    Bell, Menu, X, Upload, Download, CheckCircle2, Clock, 
-    AlertCircle, ChevronRight, Search, File, MessageSquare, 
+import React, { useState, useEffect } from 'react';
+import {
+    LayoutDashboard, FileText, Briefcase, CreditCard, User, LogOut,
+    Bell, Menu, X, Upload, Download, CheckCircle2, Clock,
+    AlertCircle, ChevronRight, Search, File, MessageSquare,
     LifeBuoy, PhoneCall, Headphones, Mail, ExternalLink, Plus
 } from 'lucide-react';
 import { BranchName, Client, TaskStatus, Invoice, ClientDocument } from '../types';
 import { MOCK_TASKS, MOCK_INVOICES, MOCK_DOCUMENTS, MOCK_COMPLIANCE_EVENTS } from '../constants';
 import { StatusBadge } from './Dashboard';
+import { api } from '../src/services/api';
 
 interface ClientPortalProps {
     client: Client;
@@ -18,13 +19,53 @@ interface ClientPortalProps {
 const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'documents' | 'services' | 'billing' | 'profile'>('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [tasks, setTasks] = useState<any[]>([]);
+    const [documents, setDocuments] = useState<ClientDocument[]>([]);
+    const [invoices, setInvoices] = useState<Invoice[]>([]); // Future: Fetch invoices
+    const [loading, setLoading] = useState(true);
 
-    // Filter Data for this Client
-    const myTasks = MOCK_TASKS.filter(t => t.clientId === client.id);
-    const myInvoices = MOCK_INVOICES.filter(i => i.clientId === client.id);
-    const myDocuments = MOCK_DOCUMENTS.filter(d => d.clientId === client.id);
-    
-    // Derived Metrics
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [t, d] = await Promise.all([
+                    api.getTasks(client.id),
+                    api.getDocuments(client.id)
+                ]);
+                setTasks(t);
+                setDocuments(d);
+            } catch (err) {
+                console.error("Failed to load portal data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [client.id]);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('clientId', client.id);
+
+            try {
+                await api.uploadDocument(formData);
+                const updatedDocs = await api.getDocuments(client.id);
+                setDocuments(updatedDocs);
+                alert("Document uploaded successfully!");
+            } catch (err) {
+                alert("Failed to upload document");
+            }
+        }
+    };
+
+    // Filter Data for this Client (using API data)
+    const myTasks = tasks; // API already filters by clientID
+    const myInvoices = MOCK_INVOICES.filter(i => i.clientId === client.id); // Keeping mock for now as invoices API not fully ready/requested
+    const myDocuments = documents;
+
+    // Derived Metrics from Real Data
     const pendingActions = myTasks.filter(t => t.status === TaskStatus.PENDING_CLIENT || t.status === TaskStatus.REVIEW).length;
     const unpaidAmount = myInvoices.filter(i => i.status === 'Unpaid' || i.status === 'Overdue').reduce((acc, curr) => acc + curr.amount, 0);
     const activeServicesCount = myTasks.filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.FILED).length;
@@ -107,16 +148,16 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                 </div>
                                 <div className="p-6 flex flex-col items-center text-center flex-1">
                                     <div className="relative mb-4">
-                                        <img 
-                                            src="https://picsum.photos/80/80?random=10" 
-                                            alt="Account Manager" 
+                                        <img
+                                            src="https://picsum.photos/80/80?random=10"
+                                            alt="Account Manager"
                                             className="w-20 h-20 rounded-2xl object-cover ring-4 ring-slate-50 shadow-sm"
                                         />
                                         <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white shadow-sm"></div>
                                     </div>
                                     <h4 className="text-lg font-black text-slate-800 tracking-tight">Suresh K</h4>
                                     <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-4">Senior Partner • {client.branch}</p>
-                                    
+
                                     <div className="w-full space-y-2 mb-6">
                                         <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 rounded-lg text-xs text-slate-600 border border-slate-100">
                                             <Mail size={14} className="text-slate-400 shrink-0" />
@@ -127,7 +168,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                             <span>+91 98XXX XXXXX</span>
                                         </div>
                                     </div>
-                                    
+
                                     <button className="w-full py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all active:scale-95 shadow-lg">
                                         Book Consultation
                                     </button>
@@ -192,10 +233,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                             <div className="space-y-6 relative before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
                                 {myTasks.slice(0, 3).map((task, idx) => (
                                     <div key={idx} className="relative flex gap-4">
-                                        <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center border-4 border-white shadow-sm z-10 ${
-                                            task.status === TaskStatus.COMPLETED ? 'bg-green-100 text-green-600' : 
+                                        <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center border-4 border-white shadow-sm z-10 ${task.status === TaskStatus.COMPLETED ? 'bg-green-100 text-green-600' :
                                             task.status === TaskStatus.NEW ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'
-                                        }`}>
+                                            }`}>
                                             {task.status === TaskStatus.COMPLETED ? <CheckCircle2 size={18} /> : <Clock size={18} />}
                                         </div>
                                         <div>
@@ -235,8 +275,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                     {/* Progress Bar Visual */}
                                     <div className="relative mb-6">
                                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                            <div 
-                                                className={`h-full rounded-full transition-all duration-1000 ${task.status === TaskStatus.OVERDUE ? 'bg-red-500' : 'bg-indigo-600'}`} 
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ${task.status === TaskStatus.OVERDUE ? 'bg-red-500' : 'bg-indigo-600'}`}
                                                 style={{ width: `${task.slaProgress}%` }}
                                             ></div>
                                         </div>
@@ -253,14 +293,14 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                         <div className="flex items-center gap-2 text-sm text-slate-500">
                                             <User size={14} /> Assigned to: <span className="font-medium text-slate-700">{task.assignedTo}</span>
                                         </div>
-                                        
+
                                         {task.status === TaskStatus.REVIEW && (
                                             <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-emerald-700 flex items-center gap-2 animate-pulse">
                                                 <CheckCircle2 size={16} /> Approve Draft
                                             </button>
                                         )}
                                         {task.status === TaskStatus.PENDING_CLIENT && (
-                                            <button 
+                                            <button
                                                 onClick={() => setActiveTab('documents')}
                                                 className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-amber-600 flex items-center gap-2"
                                             >
@@ -321,9 +361,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                             <td className="px-6 py-4 uppercase text-xs font-bold tracking-wider">{doc.type}</td>
                                             <td className="px-6 py-4 text-slate-500">{doc.uploadDate}</td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                                    doc.status === 'Verified' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-                                                }`}>
+                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${doc.status === 'Verified' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
+                                                    }`}>
                                                     {doc.status === 'Verified' && <CheckCircle2 size={10} />}
                                                     {doc.status}
                                                 </span>
@@ -383,9 +422,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                         <div className="flex items-center gap-6">
                                             <div className="text-right">
                                                 <p className="font-bold text-slate-800">₹{inv.amount.toLocaleString()}</p>
-                                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                                    inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                                }`}>
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                    }`}>
                                                     {inv.status}
                                                 </span>
                                             </div>
@@ -492,11 +530,10 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                         <button
                             key={item.id}
                             onClick={() => { setActiveTab(item.id as any); setIsSidebarOpen(false); }}
-                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
-                                activeTab === item.id 
-                                ? 'bg-indigo-800 text-white shadow-lg' 
+                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === item.id
+                                ? 'bg-indigo-800 text-white shadow-lg'
                                 : 'text-indigo-200 hover:text-white hover:bg-indigo-800/50'
-                            }`}
+                                }`}
                         >
                             <item.icon size={18} />
                             {item.label}
@@ -514,7 +551,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                             <p className="text-xs text-indigo-300 truncate">{client.email}</p>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={onLogout}
                         className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-800 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors"
                     >

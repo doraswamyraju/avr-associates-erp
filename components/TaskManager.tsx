@@ -8,7 +8,7 @@ import { api } from '../src/services/api';
 import {
     LayoutGrid, List, Plus, X, Play, Clock, ChevronRight, Search,
     User as UserIcon, StopCircle, IndianRupee, Layers, TrendingUp, Zap,
-    MousePointer2, Briefcase, History, AlertTriangle, Trash2
+    MousePointer2, Briefcase, History, AlertTriangle, Trash2, FileText, CreditCard
 } from 'lucide-react';
 
 interface TaskManagerProps {
@@ -100,6 +100,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             await api.createTask({
                 clientName: matchedClient.name,
                 clientId: matchedClient.id,
+                projectId: data.projectId,
                 serviceType: data.serviceType,
                 dueDate: data.dueDate,
                 priority: data.priority,
@@ -200,18 +201,18 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
     return (
         <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
-            {showAllocationModal && <NewAllocationModal onClose={() => setShowAllocationModal(false)} onSave={handleCreateAllocation} clients={clients} />}
+            {showAllocationModal && <NewAllocationModal onClose={() => setShowAllocationModal(false)} onSave={handleCreateAllocation} clients={clients} projects={projects} />}
             {loading && <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}
             <div className="p-6 bg-white border-b border-slate-200 shrink-0">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">{activeTab === 'projects' ? 'Practice Portfolio Yield' : 'Effort Allocation Board'}</h2>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">{activeTab === 'projects' ? 'Projects Portfolio' : 'Tasks Board'}</h2>
                         <p className="text-slate-500 text-sm font-medium">Precisely audit staff effort across all client portfolios.</p>
                     </div>
                     <div className="flex gap-3">
                         <div className="bg-slate-100 border border-slate-200 rounded-xl p-1 flex shadow-sm">
-                            <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Workload</button>
-                            <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Yield Intelligence</button>
+                            <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Tasks</button>
+                            <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Projects</button>
                         </div>
                         {tasks.length > 0 && (
                             <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge</button>
@@ -351,29 +352,118 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
     const profitability = project.budget ? project.budget - estimatedCost : 0;
     const marginPercent = project.budget ? ((profitability / project.budget) * 100).toFixed(1) : 0;
 
+    const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'financials'>('overview');
+    const [documents, setDocuments] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (activeTab === 'documents' && project.clientId) {
+            api.getDocuments(project.clientId).then(docs => setDocuments(docs));
+        }
+    }, [activeTab, project.clientId]);
+
     return (
         <div className="h-full flex flex-col bg-slate-50 overflow-hidden">
             <div className="p-6 bg-white border-b border-slate-200 shrink-0">
-                <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-slate-400 mb-4"><button onClick={onBack} className="hover:text-indigo-600 transition-colors flex items-center gap-1"><MousePointer2 size={12} /> Yield Intelligence</button><ChevronRight size={14} /><span className="text-slate-800">{project.name}</span></div>
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 shrink-0">
-                    <div className="lg:col-span-2 bg-indigo-50/30 rounded-[2.5rem] p-8 border border-indigo-100 shadow-sm flex flex-col justify-between">
-                        <div><div className="flex items-center gap-3 mb-2"><h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none">{project.name}</h1><span className="bg-white text-indigo-700 px-4 py-1 rounded-xl text-[10px] font-black uppercase border border-indigo-200 shadow-sm">Engagement Live</span></div><p className="text-sm font-medium text-slate-500 leading-relaxed line-clamp-2 mt-2">{project.description}</p></div>
-                        <div className="flex gap-12 mt-8 pt-8 border-t border-indigo-100/50">
-                            <div className="flex items-center gap-4"><div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600"><IndianRupee size={24} strokeWidth={3} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Revenue Allocation</p><p className="font-black text-slate-800 text-xl">₹{project.budget?.toLocaleString()}</p></div></div>
-                            <div className="flex items-center gap-4"><div className="p-4 bg-emerald-500 rounded-2xl shadow-xl text-white shadow-emerald-200"><TrendingUp size={24} strokeWidth={3} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Yield Margin (Est.)</p><p className="font-black text-emerald-600 text-xl">₹{profitability.toLocaleString()} <span className="text-xs opacity-70">({marginPercent}%)</span></p></div></div>
-                        </div>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-slate-400">
+                        <button onClick={onBack} className="hover:text-indigo-600 transition-colors flex items-center gap-1"><MousePointer2 size={12} /> Projects</button>
+                        <ChevronRight size={14} />
+                        <span className="text-slate-800">{project.name}</span>
                     </div>
-                    <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden flex flex-col justify-between group">
-                        <div className="relative z-10"><h4 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] mb-6">Audited Engagement</h4><div className="flex items-baseline gap-2 mb-2"><span className="text-5xl font-black">{Math.floor(totalHours)}</span><span className="text-xl font-bold text-slate-400">H</span></div><p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Aggregate Billable Logs</p></div>
-                        <div className="mt-8 relative z-10"><div className="h-2 w-full bg-white/10 rounded-full overflow-hidden border border-white/5"><div className="h-full bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.8)]" style={{ width: '65%' }}></div></div><p className="text-[9px] font-black uppercase text-slate-500 mt-3 tracking-widest flex justify-between"><span>Engagement Capacity</span><span>65%</span></p></div>
-                        <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-indigo-500 rounded-full blur-[80px] opacity-20 pointer-events-none"></div>
+                </div>
+
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-800 tracking-tight leading-none mb-2">{project.name}</h1>
+                        <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-2xl">{project.description}</p>
                     </div>
-                    <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm flex flex-col justify-center items-center text-center group hover:border-indigo-300 transition-colors"><div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center text-slate-400 mb-4 shadow-inner ring-4 ring-white transition-transform duration-500"><UserIcon size={40} /></div><p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Lead Partner</p><p className="font-black text-slate-800 text-lg">{project.manager}</p></div>
+                    <div className="flex gap-2">
+                        {['overview', 'tasks', 'documents', 'financials'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab as any)}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab
+                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                    : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                            >
+                                {tab}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
-            <div className="flex-1 flex flex-col overflow-hidden relative">
-                <div className="p-6 flex items-center justify-between bg-slate-50 shrink-0"><h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><Layers size={18} className="text-indigo-600" /> Engagement Accountability</h3>{currentUser?.role !== UserRole.CLIENT && <button className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}</div>
-                <div className="flex-1 overflow-y-auto px-6 pb-20"><TaskBoard tasks={tasks} viewMode="list" onTaskClick={onTaskClick} activeTaskTimer={activeTaskTimer} /></div>
+
+            <div className="flex-1 overflow-hidden relative bg-slate-50/50">
+                {activeTab === 'overview' && (
+                    <div className="p-8 overflow-y-auto h-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-4 mb-8"><div className="p-4 bg-indigo-50 rounded-2xl text-indigo-600"><IndianRupee size={24} strokeWidth={3} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Revenue Allocation</p><p className="font-black text-slate-800 text-2xl">₹{project.budget?.toLocaleString()}</p></div></div>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between text-xs font-bold text-slate-500"><span>Progress</span><span>{Math.floor((estimatedCost / (project.budget || 1)) * 100)}% utilized</span></div>
+                                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden"><div className="h-full bg-indigo-600 rounded-full" style={{ width: `${(estimatedCost / (project.budget || 1)) * 100}%` }}></div></div>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm flex flex-col justify-between">
+                                <div className="flex items-center gap-4 mb-8"><div className="p-4 bg-emerald-50 rounded-2xl text-emerald-600"><TrendingUp size={24} strokeWidth={3} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Yield Margin (Est.)</p><p className="font-black text-emerald-600 text-2xl">₹{profitability.toLocaleString()}</p></div></div>
+                                <div className="p-4 bg-emerald-50/50 rounded-xl text-xs font-bold text-emerald-700 text-center">
+                                    {marginPercent}% Profit Margin
+                                </div>
+                            </div>
+                            <div className="bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
+                                <div className="relative z-10"><h4 className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] mb-4">Engagement Effort</h4><div className="flex items-baseline gap-2"><span className="text-5xl font-black">{Math.floor(totalHours)}</span><span className="text-xl font-bold text-slate-400">HRS</span></div></div>
+                                <div className="absolute top-[-20%] right-[-10%] w-32 h-32 bg-indigo-500 rounded-full blur-[80px] opacity-20 pointer-events-none"></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'tasks' && (
+                    <div className="h-full flex flex-col">
+                        <div className="p-6 flex items-center justify-between shrink-0"><h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><Layers size={18} className="text-indigo-600" /> Engagement Tasks</h3>{currentUser?.role !== UserRole.CLIENT && <button className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}</div>
+                        <div className="flex-1 overflow-y-auto px-6 pb-20"><TaskBoard tasks={tasks} viewMode="list" onTaskClick={onTaskClick} activeTaskTimer={activeTaskTimer} /></div>
+                    </div>
+                )}
+
+                {activeTab === 'documents' && (
+                    <div className="p-8 h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {documents.map(doc => (
+                                <div key={doc.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:border-indigo-200 transition-all group">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600"><FileText size={20} /></div>
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${doc.status === 'Verified' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{doc.status}</span>
+                                    </div>
+                                    <h4 className="font-bold text-slate-800 truncate mb-1">{doc.name}</h4>
+                                    <p className="text-xs text-slate-400 font-bold uppercase">{doc.type} • {new Date(doc.uploadDate || doc.upload_date).toLocaleDateString()}</p>
+                                    <div className="mt-6 pt-6 border-t border-slate-50 flex gap-2">
+                                        <button className="flex-1 py-2 bg-slate-50 text-slate-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600 hover:text-white transition-colors">Download</button>
+                                    </div>
+                                </div>
+                            ))}
+                            {documents.length === 0 && (
+                                <div className="col-span-full py-20 text-center text-slate-400">
+                                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4"><FileText size={24} /></div>
+                                    <p className="font-medium">No documents linked to this engagement.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'financials' && (
+                    <div className="p-8 h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-white border border-slate-200 rounded-[2.5rem] p-12 text-center">
+                            <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 mx-auto mb-6"><CreditCard size={32} /></div>
+                            <h3 className="text-2xl font-black text-slate-800 mb-2">Financial Overview</h3>
+                            <p className="text-slate-500 max-w-lg mx-auto mb-8">Invoicing and WIP tracking for this engagement is currently being synchronized with the master ledger.</p>
+                            <div className="inline-flex gap-8 text-left">
+                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Unbilled WIP</p><p className="text-xl font-black text-slate-800">₹{(estimatedCost).toLocaleString()}</p></div>
+                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Invoiced</p><p className="text-xl font-black text-slate-800">₹0</p></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -502,11 +592,12 @@ const PerformTaskModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t
     );
 };
 
-const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[] }> = ({ onClose, onSave, clients }) => {
+const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[], projects: Project[] }> = ({ onClose, onSave, clients, projects }) => {
     const [clientName, setClientName] = useState('');
     const [serviceType, setServiceType] = useState('Income Tax Filing');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Medium');
+    const [projectId, setProjectId] = useState('');
     const [filteredClients, setFilteredClients] = useState<Client[]>([]);
 
     useEffect(() => {
@@ -516,6 +607,20 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
             setFilteredClients([]);
         }
     }, [clientName, clients]);
+
+    // Auto-select project if only one exists for client
+    useEffect(() => {
+        const client = clients.find(c => c.name === clientName);
+        if (client) {
+            const clientProjects = projects.filter(p => p.clientId === client.id);
+            if (clientProjects.length === 1) setProjectId(clientProjects[0].id);
+        }
+    }, [clientName, clients, projects]);
+
+    const clientProjects = clientName ? projects.filter(p => {
+        const c = clients.find(cl => cl.name === clientName);
+        return c && p.clientId === c.id;
+    }) : [];
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -547,6 +652,15 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                         <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </div>
                     <div>
+                        {clientProjects.length > 0 && (
+                            <div className="mb-4">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
+                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)}>
+                                    <option value="">-- Standalone Task --</option>
+                                    {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+                        )}
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
                         <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
                             <option>Low</option><option>Medium</option><option>High</option>
@@ -556,7 +670,7 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
 
                 <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100">
                     <button onClick={onClose} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
-                    <button onClick={() => onSave({ clientName, serviceType, dueDate, priority })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Allocate</button>
+                    <button onClick={() => onSave({ clientName, serviceType, dueDate, priority, projectId })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Allocate</button>
                 </div>
             </div>
         </div>

@@ -111,5 +111,21 @@ export const api = {
         const response = await fetch(`${API_BASE_URL}/staff.php`);
         if (!response.ok) throw new Error('Failed to fetch staff');
         return response.json();
+    },
+
+    // Documents
+    uploadDocument: async (formData: FormData) => {
+        const response = await fetch(`${API_BASE_URL}/documents.php`, {
+            method: 'POST',
+            body: formData,
+        });
+        if (!response.ok) throw new Error('Upload failed');
+        return response.json();
+    },
+
+    getDocuments: async (clientId: string) => {
+        const response = await fetch(`${API_BASE_URL}/documents.php?clientId=${clientId}`);
+        if (!response.ok) throw new Error('Failed to fetch documents');
+        return response.json();
     }
 };

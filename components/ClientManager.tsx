@@ -94,6 +94,26 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
             } else {
                 const newClient = await api.createClient(clientData);
                 setClients([newClient, ...clients]);
+
+                // Automation: Create tasks for selected services
+                if (newClient.selectedServices && newClient.selectedServices.length > 0) {
+                    const tasksToCreate = newClient.selectedServices.map(service => ({
+                        clientName: newClient.name,
+                        clientId: newClient.id,
+                        serviceType: service + ' Filing', // e.g. "GST Filing"
+                        dueDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 10).toISOString().split('T')[0], // Next month 10th
+                        priority: 'Medium',
+                        status: TaskStatus.NEW,
+                        branch: newClient.branch,
+                        assignedTo: '',
+                        period: 'Current Month',
+                        slaProgress: 0,
+                        totalTrackedMinutes: 0
+                    }));
+                    await api.createTasksBatch(tasksToCreate as any);
+                    // Alert or Notify? Maybe just silent success or log
+                    console.log(`Auto-created ${tasksToCreate.length} tasks for ${newClient.name}`);
+                }
             }
             setViewMode('directory');
             setClientIdToEdit(undefined);
@@ -197,6 +217,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
             client={selectedClient}
             onBack={handleBack}
             onEdit={() => { setClientIdToEdit(selectedClient); setViewMode('onboarding'); }}
+            onNewEngagement={() => setShowEngagementModal(true)}
         />;
     }
 
@@ -298,7 +319,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                                                     {selectedClientIds.includes(client.id) && <div className="w-2 h-2 bg-indigo-600 rounded-sm"></div>}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5 flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white transition-all">{client.name.charAt(0)}</div><div><p className="font-black text-slate-800 text-base tracking-tight">{client.name}</p><p className="text-[10px] text-slate-400 font-black tracking-widest uppercase">{client.pan}</p></div></td>
+                                            <td className="px-6 py-5 flex items-center gap-4"><div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-sm border border-slate-200 group-hover:bg-indigo-600 group-hover:text-white transition-all">{(client.name || '?').charAt(0)}</div><div><p className="font-black text-slate-800 text-base tracking-tight">{client.name}</p><p className="text-[10px] text-slate-400 font-black tracking-widest uppercase">{client.pan}</p></div></td>
                                             <td className="px-6 py-5"><span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${client.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-400'}`}>{client.status}</span></td>
                                             <td className="px-6 py-5"><div className="flex flex-col gap-0.5 text-xs text-slate-500 font-bold"><span>{client.phone}</span><span className="opacity-70 lowercase font-medium">{client.email}</span></div></td>
                                             <td className="px-6 py-5"><span className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl uppercase tracking-widest">{client.branch}</span></td>
@@ -394,70 +415,119 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
                         </>
                     )}
 
-                    {(service === 'GST-composition' || service === 'GST-non-composition' || service.includes('GST')) && (
-                        <>
-                            {renderInput('GST No', 'gstNo', 'Enter GST No')}
-                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
-                            {renderInput('User ID', 'userId', 'Enter GST User ID')}
-                            {renderInput('Password', 'password', 'Enter GST Password', 'password')}
-                        </>
-                    )}
+                    {
+                        service === 'TAX AUDIT' && (
+                            <>
+                                {renderInput('Audit Type', 'auditType', 'e.g. 44AB / Company Audit')}
+                                {renderInput('Turnover (Approx)', 'turnover', 'e.g. 2.5 Cr')}
+                                {renderInput('Previous Auditor', 'prevAuditor', 'Name of previous CA firm')}
+                                {renderInput('Tally Password', 'tallyPassword', 'Tally Vault Password', 'password')}
+                            </>
+                        )
+                    }
 
-                    {service === 'TDS' && (
-                        <>
-                            {renderInput('TAN Number', 'tan', 'Enter TAN')}
-                            {renderInput('TDS UserID', 'userId', 'Enter TDS User ID')}
-                            {renderInput('TDS Password', 'password', 'Enter TDS Password', 'password')}
-                            {renderInput('AIN Number', 'ain', 'Enter AIN Num')}
-                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
-                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
-                        </>
-                    )}
+                    {
+                        (service === 'ROC/COMPANY LAW' || service === 'ROC') && (
+                            <>
+                                {renderInput('CIN / LLPIN', 'cin', 'Corporate Identity Number')}
+                                {renderInput('MCA V3 Login', 'mcaUser', 'MCA Portal Username')}
+                                {renderInput('MCA V3 Password', 'mcaPass', 'MCA Portal Password', 'password')}
+                                {renderInput('Authorized Capital', 'authCapital', 'e.g. 10 Lakhs')}
+                            </>
+                        )
+                    }
 
-                    {service === 'Food Licence' && (
-                        <>
-                            {renderInput('User ID', 'userId', 'Enter Food User ID')}
-                            {renderInput('Password', 'password', 'Enter Food Password', 'password')}
-                            {renderInput('REG Mail ID', 'regMailId', 'Enter Email ID')}
-                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
-                        </>
-                    )}
+                    {
+                        service === 'PROJECT REPORTS' && (
+                            <>
+                                {renderInput('Project Value', 'projectValue', 'Estimated Project Cost')}
+                                {renderInput('Loan Requirement', 'loanReq', 'Loan Amount Required')}
+                                {renderInput('Bank Name', 'targetBank', 'Applying to which bank?')}
+                                <div className="md:col-span-2">
+                                    {renderInput('Business Activity', 'bizActivity', 'Brief description of proposed business')}
+                                </div>
+                            </>
+                        )
+                    }
 
-                    {service === 'MSME' && (
-                        <>
-                            {renderInput('Reg No', 'regNo', 'Enter Reg No')}
-                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
-                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
-                        </>
-                    )}
+                    {
+                        (service === 'GST-composition' || service === 'GST-non-composition' || service.includes('GST')) && (
+                            <>
+                                {renderInput('GST No', 'gstNo', 'Enter GST No')}
+                                {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                                {renderInput('User ID', 'userId', 'Enter GST User ID')}
+                                {renderInput('Password', 'password', 'Enter GST Password', 'password')}
+                            </>
+                        )
+                    }
 
-                    {service === 'Labour' && (
-                        <>
-                            {renderInput('Reg No', 'regNo', 'Enter Reg No')}
-                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
-                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
-                            {renderInput('Password', 'password', 'Enter Password', 'password')}
-                        </>
-                    )}
+                    {
+                        service === 'TDS' && (
+                            <>
+                                {renderInput('TAN Number', 'tan', 'Enter TAN')}
+                                {renderInput('TDS UserID', 'userId', 'Enter TDS User ID')}
+                                {renderInput('TDS Password', 'password', 'Enter TDS Password', 'password')}
+                                {renderInput('AIN Number', 'ain', 'Enter AIN Num')}
+                                {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                                {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                            </>
+                        )
+                    }
 
-                    {service === 'PF AND ESI' && (
-                        <>
-                            {renderInput('PF UserID', 'pfUserId', 'Enter PF User ID')}
-                            {renderInput('PF Password', 'pfPassword', 'Enter PF Password', 'password')}
-                            {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
-                            {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
-                        </>
-                    )}
+                    {
+                        service === 'Food Licence' && (
+                            <>
+                                {renderInput('User ID', 'userId', 'Enter Food User ID')}
+                                {renderInput('Password', 'password', 'Enter Food Password', 'password')}
+                                {renderInput('REG Mail ID', 'regMailId', 'Enter Email ID')}
+                                {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                            </>
+                        )
+                    }
 
-                    {service === 'Others' && (
-                        <>
-                            <div className="col-span-2">
-                                {renderInput('Details', 'description', 'Enter other service details...')}
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
+                    {
+                        service === 'MSME' && (
+                            <>
+                                {renderInput('Reg No', 'regNo', 'Enter Reg No')}
+                                {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                                {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                            </>
+                        )
+                    }
+
+                    {
+                        service === 'Labour' && (
+                            <>
+                                {renderInput('Reg No', 'regNo', 'Enter Reg No')}
+                                {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                                {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                                {renderInput('Password', 'password', 'Enter Password', 'password')}
+                            </>
+                        )
+                    }
+
+                    {
+                        service === 'PF AND ESI' && (
+                            <>
+                                {renderInput('PF UserID', 'pfUserId', 'Enter PF User ID')}
+                                {renderInput('PF Password', 'pfPassword', 'Enter PF Password', 'password')}
+                                {renderInput('Mail ID', 'mailId', 'Enter Email ID')}
+                                {renderInput('Mobile Number', 'mobile', 'Enter Mobile Number')}
+                            </>
+                        )
+                    }
+
+                    {
+                        service === 'Others' && (
+                            <>
+                                <div className="col-span-2">
+                                    {renderInput('Details', 'description', 'Enter other service details...')}
+                                </div>
+                            </>
+                        )
+                    }
+                </div >
+            </div >
         );
     };
 
@@ -562,6 +632,17 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
                                             );
                                         })}
                                     </div>
+
+                                    {/* Additional Service Details Form */}
+                                    {formData.selectedServices && formData.selectedServices.length > 0 && (
+                                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                                            {formData.selectedServices.map(service => (
+                                                <div key={service} className="mt-6">
+                                                    {renderServiceDetails(service)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                     <div className="p-8 bg-indigo-900 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden flex items-center gap-8">
                                         <div className="w-16 h-16 bg-white/10 rounded-3xl backdrop-blur-md flex items-center justify-center shrink-0 shadow-inner">

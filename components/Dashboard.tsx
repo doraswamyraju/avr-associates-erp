@@ -123,7 +123,10 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, onNavig
                                 Export Report
                             </button>
                         )}
-                        <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm">
+                        <button
+                            onClick={() => onNavigate && onNavigate('tasks', { quickAction: 'NEW_TASK' })}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm"
+                        >
                             + New Task
                         </button>
                     </div>
