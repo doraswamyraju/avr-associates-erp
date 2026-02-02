@@ -58,6 +58,31 @@ switch ($method) {
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);
         }
+    case 'DELETE':
+        if (isset($_GET['all']) && $_GET['all'] == 'true') {
+            $sql = "DELETE FROM projects";
+            $stmt = $pdo->prepare($sql);
+            try {
+                $stmt->execute();
+                echo json_encode(['message' => 'All projects deleted']);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+        } elseif (isset($_GET['id'])) {
+            $sql = "DELETE FROM projects WHERE id = :id";
+            $stmt = $pdo->prepare($sql);
+            try {
+                $stmt->execute([':id' => $_GET['id']]);
+                echo json_encode(['message' => 'Project deleted']);
+            } catch (PDOException $e) {
+                http_response_code(500);
+                echo json_encode(['error' => $e->getMessage()]);
+            }
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ID or all parameter']);
+        }
         break;
 }
 ?>

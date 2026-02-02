@@ -42,10 +42,14 @@ const TaskManager: React.FC<TaskManagerProps> = ({
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [showAllocationModal, setShowAllocationModal] = useState(false);
+    const [showProjectModal, setShowProjectModal] = useState(false);
 
     useEffect(() => {
-        if (quickAction === 'NEW_TASK' || quickAction === 'NEW_PROJECT') {
+        if (quickAction === 'NEW_TASK') {
             setShowAllocationModal(true);
+            onQuickActionHandled?.();
+        } else if (quickAction === 'NEW_PROJECT') {
+            setShowProjectModal(true);
             onQuickActionHandled?.();
         }
     }, [quickAction]);
@@ -90,118 +94,160 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                 alert("Failed to delete tasks.");
             }
         }
+    }
+};
+
+const handleDeleteAllProjects = async () => {
+    if (confirm("CRITICAL WARNING: This will delete ALL PROJECTS and their linked data. This cannot be undone. Are you sure?")) {
+        try {
+            await api.deleteAllProjects();
+            setProjects([]);
+            alert("Projects purged.");
+        } catch (e) {
+            console.error("Failed to delete projects", e);
+        }
+    }
+};
+
+const handleCreateAllocation = async (data: any) => {
+    const matchedClient = clients.find(c => c.name === data.clientName);
+    if (!matchedClient) { alert("Please select a valid client from the list."); return; }
+
+    try {
+        await api.createTask({
+            clientName: matchedClient.name,
+            clientId: matchedClient.id,
+            projectId: data.projectId,
+            serviceType: data.serviceType,
+            dueDate: data.dueDate,
+            priority: data.priority,
+            status: TaskStatus.NEW,
+            branch: matchedClient.branch,
+            assignedTo: '',
+            period: 'FY24-25',
+            slaProgress: 0,
+            totalTrackedMinutes: 0
+        } as any);
+
+        setShowAllocationModal(false);
+        const updated = await api.getTasks();
+        setTasks(updated);
+        alert("Allocation Created Successfully");
+    } catch (e: any) {
+        console.error("Failed create task", e);
+        alert("Failed to create allocation: " + e.message);
+    }
+}
     };
 
-    const handleCreateAllocation = async (data: any) => {
-        const matchedClient = clients.find(c => c.name === data.clientName);
-        if (!matchedClient) { alert("Please select a valid client from the list."); return; }
+const handleCreateProject = async (data: any) => {
+    const matchedClient = clients.find(c => c.name === data.clientName);
+    if (!matchedClient) { alert("Please select a valid client."); return; }
 
-        try {
-            await api.createTask({
+    try {
+        await api.createProject({
+            name: data.name,
+            description: data.description,
+            clientId: matchedClient.id,
+            status: ProjectStatus.PLANNING, // Default
+            startDate: new Date().toISOString().split('T')[0],
+            branch: matchedClient.branch,
+            priority: Priority.MEDIUM,
+            budget: Number(data.budget) || 0,
+            totalHoursTracked: 0
+        } as any);
+
+        setShowProjectModal(false);
+        const updated = await api.getProjects();
+        setProjects(updated);
+        alert("Project Created Successfully");
+    } catch (e: any) {
+        console.error("Failed create project", e);
+        alert("Failed to create project: " + e.message);
+    }
+};
+
+const handleImportTasks = async (data: any[]) => {
+    let successCount = 0;
+    const newTasks: Partial<Task>[] = [];
+
+    // 1. Prepare data
+    for (const row of data) {
+        const clientName = row['Client Name'] || row['Client'] || row['client'];
+        const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
+
+        if (clientName && matchedClient) {
+            newTasks.push({
                 clientName: matchedClient.name,
                 clientId: matchedClient.id,
-                projectId: data.projectId,
-                serviceType: data.serviceType,
-                dueDate: data.dueDate,
-                priority: data.priority,
+                serviceType: row['Service'] || row['service'] || 'General Advisory',
+                dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
                 status: TaskStatus.NEW,
-                branch: matchedClient.branch,
-                assignedTo: '',
-                period: 'FY24-25',
+                priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
+                assignedTo: row['Assignee'] || row['assignee'] || '',
+                branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                period: row['Period'] || row['period'] || 'FY24-25',
                 slaProgress: 0,
                 totalTrackedMinutes: 0
-            } as any);
-
-            setShowAllocationModal(false);
-            const updated = await api.getTasks();
-            setTasks(updated);
-            alert("Allocation Created Successfully");
-        } catch (e: any) {
-            console.error("Failed create task", e);
-            alert("Failed to create allocation: " + e.message);
+            });
         }
-    };
-
-    const handleImportTasks = async (data: any[]) => {
-        let successCount = 0;
-        const newTasks: Partial<Task>[] = [];
-
-        // 1. Prepare data
-        for (const row of data) {
-            const clientName = row['Client Name'] || row['Client'] || row['client'];
-            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
-
-            if (clientName && matchedClient) {
-                newTasks.push({
-                    clientName: matchedClient.name,
-                    clientId: matchedClient.id,
-                    serviceType: row['Service'] || row['service'] || 'General Advisory',
-                    dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
-                    status: TaskStatus.NEW,
-                    priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
-                    assignedTo: row['Assignee'] || row['assignee'] || '',
-                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
-                    period: row['Period'] || row['period'] || 'FY24-25',
-                    slaProgress: 0,
-                    totalTrackedMinutes: 0
-                });
-            }
-        }
-
-        if (newTasks.length === 0) {
-            alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
-            return;
-        }
-
-        // 2. Batch process
-        const BATCH_SIZE = 500;
-        const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
-
-        // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
-        // Ideally use a loading state, but for quick fix:
-        console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
-
-        try {
-            for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
-                const batch = newTasks.slice(i, i + BATCH_SIZE);
-                await api.createTasksBatch(batch as any);
-                successCount += batch.length;
-                console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
-            }
-
-            // Refresh tasks
-            const updatedTasks = await api.getTasks();
-            setTasks(updatedTasks);
-            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
-        } catch (e: any) {
-            console.error("Batch import failed", e);
-            alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
-        }
-    };
-
-    const getProjectProgress = (projectId: string) => {
-        const projectTasks = tasks.filter(t => t.projectId === projectId);
-        if (projectTasks.length === 0) return 0;
-        const completed = projectTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
-        return Math.round((completed / projectTasks.length) * 100);
-    };
-
-    if (selectedProject) {
-        return (
-            <ProjectDetailView
-                project={selectedProject}
-                tasks={tasks.filter(t => t.projectId === selectedProject.id)}
-                onBack={() => setSelectedProject(null)}
-                onTaskClick={setSelectedTask}
-                currentUser={currentUser}
-                activeTaskTimer={activeTaskTimer}
-            />
-        );
     }
 
+    if (newTasks.length === 0) {
+        alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
+        return;
+    }
+
+    // 2. Batch process
+    const BATCH_SIZE = 500;
+    const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
+
+    // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
+    // Ideally use a loading state, but for quick fix:
+    console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
+
+    try {
+        for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
+            const batch = newTasks.slice(i, i + BATCH_SIZE);
+            await api.createTasksBatch(batch as any);
+            successCount += batch.length;
+            console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+        }
+
+        // Refresh tasks
+        const updatedTasks = await api.getTasks();
+        setTasks(updatedTasks);
+        alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
+    } catch (e: any) {
+        console.error("Batch import failed", e);
+        alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
+    }
+};
+
+const getProjectProgress = (projectId: string) => {
+    const projectTasks = tasks.filter(t => t.projectId === projectId);
+    if (projectTasks.length === 0) return 0;
+    const completed = projectTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
+    return Math.round((completed / projectTasks.length) * 100);
+};
+
+if (selectedProject) {
     return (
+        <ProjectDetailView
+            project={selectedProject}
+            tasks={tasks.filter(t => t.projectId === selectedProject.id)}
+            onBack={() => setSelectedProject(null)}
+            onTaskClick={setSelectedTask}
+            currentUser={currentUser}
+            activeTaskTimer={activeTaskTimer}
+        />
+    );
+}
+
+return (
         <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
             {showAllocationModal && <NewAllocationModal onClose={() => setShowAllocationModal(false)} onSave={handleCreateAllocation} clients={clients} projects={projects} />}
+            {showProjectModal && <NewProjectModal onClose={() => setShowProjectModal(false)} onSave={handleCreateProject} clients={clients} />}
             {loading && <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}
             <div className="p-6 bg-white border-b border-slate-200 shrink-0">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -214,15 +260,26 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                             <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Tasks</button>
                             <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Projects</button>
                         </div>
-                        {tasks.length > 0 && (
-                            <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge</button>
+                        </div>
+                        {activeTab === 'tasks' && tasks.length > 0 && (
+                            <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Tasks</button>
+                        )}
+                        {activeTab === 'projects' && projects.length > 0 && (
+                            <button onClick={handleDeleteAllProjects} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Projects</button>
                         )}
                         <ExcelImporter
                             templateName="Tasks"
                             requiredColumns={['Client Name']}
                             onImport={handleImportTasks}
                         />
-                        <button onClick={() => setShowAllocationModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Allocation</button>
+                            requiredColumns={['Client Name']}
+                            onImport={handleImportTasks}
+                        />
+                        {activeTab === 'tasks' ? (
+                            <button onClick={() => setShowAllocationModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Task</button>
+                        ) : (
+                            <button onClick={() => setShowProjectModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Project</button>
+                        )}
                     </div>
                 </div>
 
@@ -254,17 +311,19 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                 )}
             </div>
 
-            {selectedTask && (
-                <PerformTaskModal
-                    task={selectedTask}
-                    onClose={() => setSelectedTask(null)}
-                    onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
-                    activeTaskTimer={activeTaskTimer}
-                    setActiveTaskTimer={setActiveTaskTimer}
-                    currentUser={currentUser}
-                />
-            )}
-        </div>
+            {
+    selectedTask && (
+        <PerformTaskModal
+            task={selectedTask}
+            onClose={() => setSelectedTask(null)}
+            onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
+            activeTaskTimer={activeTaskTimer}
+            setActiveTaskTimer={setActiveTaskTimer}
+            currentUser={currentUser}
+        />
+    )
+}
+        </div >
     );
 };
 
@@ -678,3 +737,60 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
 };
 
 export default TaskManager;
+
+const NewProjectModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[] }> = ({ onClose, onSave, clients }) => {
+    const [clientName, setClientName] = useState('');
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [budget, setBudget] = useState('');
+    const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+
+    useEffect(() => {
+        if (clientName) {
+            setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase())).slice(0, 5));
+        } else {
+            setFilteredClients([]);
+        }
+    }, [clientName, clients]);
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+                <h3 className="text-lg font-black text-slate-800 mb-6">New Client Project</h3>
+
+                <div className="space-y-4">
+                    <div className="relative">
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Client Entity</label>
+                        <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Search client..." />
+                        {filteredClients.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 z-50 overflow-hidden">
+                                {filteredClients.map(c => (
+                                    <div key={c.id} onClick={() => { setClientName(c.name); setFilteredClients([]); }} className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm font-bold text-slate-700">
+                                        {c.name} <span className="text-[10px] text-slate-400 font-normal ml-2">{c.branch}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Name</label>
+                        <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. FY23-24 Stat Audit" />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Description</label>
+                        <textarea className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Brief scope..." />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Est. Revenue (₹)</label>
+                        <input type="number" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={budget} onChange={e => setBudget(e.target.value)} placeholder="50000" />
+                    </div>
+                </div>
+
+                <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <button onClick={onClose} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                    <button onClick={() => onSave({ clientName, name, description, budget })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Create Project</button>
+                </div>
+            </div>
+        </div>
+    );
+};
