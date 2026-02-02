@@ -750,7 +750,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                 onSave={handleCreateAllocation}
                 clients={clients}
                 projects={projects}
-                staff={MOCK_STAFF}
+                staff={MOCK_STAFF.map(s => s.name)}
                 preSelectedProjectId={preSelectedProjectForTask}
             />}
             {showProjectModal && <NewProjectModal onClose={() => setShowProjectModal(false)} onSave={handleCreateProject} clients={clients} />}
