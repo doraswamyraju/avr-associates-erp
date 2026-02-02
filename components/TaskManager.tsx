@@ -110,6 +110,7 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
     const marginPercent = project.budget ? ((profitability / project.budget) * 100).toFixed(1) : 0;
 
     const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'financials'>('overview');
+    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
     const [documents, setDocuments] = useState<any[]>([]);
 
     useEffect(() => {
@@ -177,8 +178,17 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
 
                 {activeTab === 'tasks' && (
                     <div className="h-full flex flex-col">
-                        <div className="p-6 flex items-center justify-between shrink-0"><h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><Layers size={18} className="text-indigo-600" /> Engagement Tasks</h3>{currentUser?.role !== UserRole.CLIENT && <button onClick={onNewTask} className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}</div>
-                        <div className="flex-1 overflow-y-auto px-6 pb-20"><TaskBoard tasks={tasks} viewMode="list" onTaskClick={onTaskClick} activeTaskTimer={activeTaskTimer} /></div>
+                        <div className="p-6 flex items-center justify-between shrink-0">
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><Layers size={18} className="text-indigo-600" /> Engagement Tasks</h3>
+                            <div className="flex gap-3">
+                                <div className="bg-slate-100 rounded-xl p-1 flex">
+                                    <button onClick={() => setViewMode('kanban')} className={`p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
+                                    <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><List size={16} /></button>
+                                </div>
+                                {currentUser?.role !== UserRole.CLIENT && <button onClick={onNewTask} className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto px-6 pb-20"><TaskBoard tasks={tasks} viewMode={viewMode} onTaskClick={onTaskClick} activeTaskTimer={activeTaskTimer} /></div>
                     </div>
                 )}
 
@@ -398,52 +408,67 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                 <h3 className="text-lg font-black text-slate-800 mb-6">New Resource Allocation</h3>
 
                 <div className="space-y-4">
-                    <div className="relative">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Client Entity</label>
-                        <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Search client..." />
-                        {filteredClients.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 z-50 overflow-hidden">
-                                {filteredClients.map(c => (
-                                    <div key={c.id} onClick={() => { setClientName(c.name); setFilteredClients([]); }} className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm font-bold text-slate-700">
-                                        {c.name} <span className="text-[10px] text-slate-400 font-normal ml-2">{c.branch}</span>
-                                    </div>
-                                ))}
+                    {preSelectedProjectId ? (
+                        // Context-aware simplified view
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Client</p><p className="font-bold text-slate-800">{clientName}</p></div>
+                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Project</p><p className="font-bold text-slate-800">{projects.find(p => p.id === projectId)?.name}</p></div>
                             </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Service Type</label>
-                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={serviceType} onChange={e => setServiceType(e.target.value)}>
-                            {['Income Tax Filing', 'GST Compliance', 'Audit Assurance', 'Company Law', 'Consultancy'].map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                    </div>
+                        </div>
+                    ) : (
+                        // Standard full view
+                        <>
+                            <div className="relative">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Client Entity</label>
+                                <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Search client..." />
+                                {filteredClients.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-xl shadow-xl mt-1 z-50 overflow-hidden">
+                                        {filteredClients.map(c => (
+                                            <div key={c.id} onClick={() => { setClientName(c.name); setFilteredClients([]); }} className="px-4 py-3 hover:bg-slate-50 cursor-pointer text-sm font-bold text-slate-700">
+                                                {c.name} <span className="text-[10px] text-slate-400 font-normal ml-2">{c.branch}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Service Type</label>
+                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={serviceType} onChange={e => setServiceType(e.target.value)}>
+                                    {['Income Tax Filing', 'GST Compliance', 'Audit Assurance', 'Company Law', 'Consultancy'].map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                        </>
+                    )}
+
                     <div>
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Due Date</label>
                         <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </div>
-                    <div>
+
+                    {!preSelectedProjectId && (
                         <div>
                             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
-                            <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)} disabled={!!preSelectedProjectId}>
+                            <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)}>
                                 <option value="">-- Standalone Task --</option>
                                 {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
                             </select>
                         </div>
+                    )}
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
-                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
-                                    <option>Low</option><option>Medium</option><option>High</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Assign To</label>
-                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
-                                    <option value="">-- Unassigned --</option>
-                                    {staff.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
+                            <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
+                                <option>Low</option><option>Medium</option><option>High</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Assign To</label>
+                            <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
+                                <option value="">-- Unassigned --</option>
+                                {staff.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                         </div>
                     </div>
 
