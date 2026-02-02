@@ -95,156 +95,156 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             }
         }
     }
-};
 
-const handleDeleteAllProjects = async () => {
-    if (confirm("CRITICAL WARNING: This will delete ALL PROJECTS and their linked data. This cannot be undone. Are you sure?")) {
-        try {
-            await api.deleteAllProjects();
-            setProjects([]);
-            alert("Projects purged.");
-        } catch (e) {
-            console.error("Failed to delete projects", e);
+
+    const handleDeleteAllProjects = async () => {
+        if (confirm("CRITICAL WARNING: This will delete ALL PROJECTS and their linked data. This cannot be undone. Are you sure?")) {
+            try {
+                await api.deleteAllProjects();
+                setProjects([]);
+                alert("Projects purged.");
+            } catch (e) {
+                console.error("Failed to delete projects", e);
+            }
         }
-    }
-};
+    };
 
-const handleCreateAllocation = async (data: any) => {
-    const matchedClient = clients.find(c => c.name === data.clientName);
-    if (!matchedClient) { alert("Please select a valid client from the list."); return; }
+    const handleCreateAllocation = async (data: any) => {
+        const matchedClient = clients.find(c => c.name === data.clientName);
+        if (!matchedClient) { alert("Please select a valid client from the list."); return; }
 
-    try {
-        await api.createTask({
-            clientName: matchedClient.name,
-            clientId: matchedClient.id,
-            projectId: data.projectId,
-            serviceType: data.serviceType,
-            dueDate: data.dueDate,
-            priority: data.priority,
-            status: TaskStatus.NEW,
-            branch: matchedClient.branch,
-            assignedTo: '',
-            period: 'FY24-25',
-            slaProgress: 0,
-            totalTrackedMinutes: 0
-        } as any);
-
-        setShowAllocationModal(false);
-        const updated = await api.getTasks();
-        setTasks(updated);
-        alert("Allocation Created Successfully");
-    } catch (e: any) {
-        console.error("Failed create task", e);
-        alert("Failed to create allocation: " + e.message);
-    }
-}
-
-
-const handleCreateProject = async (data: any) => {
-    const matchedClient = clients.find(c => c.name === data.clientName);
-    if (!matchedClient) { alert("Please select a valid client."); return; }
-
-    try {
-        await api.createProject({
-            name: data.name,
-            description: data.description,
-            clientId: matchedClient.id,
-            status: ProjectStatus.PLANNING, // Default
-            startDate: new Date().toISOString().split('T')[0],
-            branch: matchedClient.branch,
-            priority: Priority.MEDIUM,
-            budget: Number(data.budget) || 0,
-            totalHoursTracked: 0
-        } as any);
-
-        setShowProjectModal(false);
-        const updated = await api.getProjects();
-        setProjects(updated);
-        alert("Project Created Successfully");
-    } catch (e: any) {
-        console.error("Failed create project", e);
-        alert("Failed to create project: " + e.message);
-    }
-};
-
-const handleImportTasks = async (data: any[]) => {
-    let successCount = 0;
-    const newTasks: Partial<Task>[] = [];
-
-    // 1. Prepare data
-    for (const row of data) {
-        const clientName = row['Client Name'] || row['Client'] || row['client'];
-        const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
-
-        if (clientName && matchedClient) {
-            newTasks.push({
+        try {
+            await api.createTask({
                 clientName: matchedClient.name,
                 clientId: matchedClient.id,
-                serviceType: row['Service'] || row['service'] || 'General Advisory',
-                dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
+                projectId: data.projectId,
+                serviceType: data.serviceType,
+                dueDate: data.dueDate,
+                priority: data.priority,
                 status: TaskStatus.NEW,
-                priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
-                assignedTo: row['Assignee'] || row['assignee'] || '',
-                branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
-                period: row['Period'] || row['period'] || 'FY24-25',
+                branch: matchedClient.branch,
+                assignedTo: '',
+                period: 'FY24-25',
                 slaProgress: 0,
                 totalTrackedMinutes: 0
-            });
+            } as any);
+
+            setShowAllocationModal(false);
+            const updated = await api.getTasks();
+            setTasks(updated);
+            alert("Allocation Created Successfully");
+        } catch (e: any) {
+            console.error("Failed create task", e);
+            alert("Failed to create allocation: " + e.message);
         }
     }
 
-    if (newTasks.length === 0) {
-        alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
-        return;
-    }
 
-    // 2. Batch process
-    const BATCH_SIZE = 500;
-    const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
+    const handleCreateProject = async (data: any) => {
+        const matchedClient = clients.find(c => c.name === data.clientName);
+        if (!matchedClient) { alert("Please select a valid client."); return; }
 
-    // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
-    // Ideally use a loading state, but for quick fix:
-    console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
+        try {
+            await api.createProject({
+                name: data.name,
+                description: data.description,
+                clientId: matchedClient.id,
+                status: ProjectStatus.PLANNING, // Default
+                startDate: new Date().toISOString().split('T')[0],
+                branch: matchedClient.branch,
+                priority: Priority.MEDIUM,
+                budget: Number(data.budget) || 0,
+                totalHoursTracked: 0
+            } as any);
 
-    try {
-        for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
-            const batch = newTasks.slice(i, i + BATCH_SIZE);
-            await api.createTasksBatch(batch as any);
-            successCount += batch.length;
-            console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+            setShowProjectModal(false);
+            const updated = await api.getProjects();
+            setProjects(updated);
+            alert("Project Created Successfully");
+        } catch (e: any) {
+            console.error("Failed create project", e);
+            alert("Failed to create project: " + e.message);
+        }
+    };
+
+    const handleImportTasks = async (data: any[]) => {
+        let successCount = 0;
+        const newTasks: Partial<Task>[] = [];
+
+        // 1. Prepare data
+        for (const row of data) {
+            const clientName = row['Client Name'] || row['Client'] || row['client'];
+            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
+
+            if (clientName && matchedClient) {
+                newTasks.push({
+                    clientName: matchedClient.name,
+                    clientId: matchedClient.id,
+                    serviceType: row['Service'] || row['service'] || 'General Advisory',
+                    dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
+                    status: TaskStatus.NEW,
+                    priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
+                    assignedTo: row['Assignee'] || row['assignee'] || '',
+                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                    period: row['Period'] || row['period'] || 'FY24-25',
+                    slaProgress: 0,
+                    totalTrackedMinutes: 0
+                });
+            }
         }
 
-        // Refresh tasks
-        const updatedTasks = await api.getTasks();
-        setTasks(updatedTasks);
-        alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
-    } catch (e: any) {
-        console.error("Batch import failed", e);
-        alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
+        if (newTasks.length === 0) {
+            alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
+            return;
+        }
+
+        // 2. Batch process
+        const BATCH_SIZE = 500;
+        const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
+
+        // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
+        // Ideally use a loading state, but for quick fix:
+        console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
+
+        try {
+            for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
+                const batch = newTasks.slice(i, i + BATCH_SIZE);
+                await api.createTasksBatch(batch as any);
+                successCount += batch.length;
+                console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+            }
+
+            // Refresh tasks
+            const updatedTasks = await api.getTasks();
+            setTasks(updatedTasks);
+            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
+        } catch (e: any) {
+            console.error("Batch import failed", e);
+            alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
+        }
+    };
+
+    const getProjectProgress = (projectId: string) => {
+        const projectTasks = tasks.filter(t => t.projectId === projectId);
+        if (projectTasks.length === 0) return 0;
+        const completed = projectTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
+        return Math.round((completed / projectTasks.length) * 100);
+    };
+
+    if (selectedProject) {
+        return (
+            <ProjectDetailView
+                project={selectedProject}
+                tasks={tasks.filter(t => t.projectId === selectedProject.id)}
+                onBack={() => setSelectedProject(null)}
+                onTaskClick={setSelectedTask}
+                currentUser={currentUser}
+                activeTaskTimer={activeTaskTimer}
+            />
+        );
     }
-};
 
-const getProjectProgress = (projectId: string) => {
-    const projectTasks = tasks.filter(t => t.projectId === projectId);
-    if (projectTasks.length === 0) return 0;
-    const completed = projectTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
-    return Math.round((completed / projectTasks.length) * 100);
-};
-
-if (selectedProject) {
     return (
-        <ProjectDetailView
-            project={selectedProject}
-            tasks={tasks.filter(t => t.projectId === selectedProject.id)}
-            onBack={() => setSelectedProject(null)}
-            onTaskClick={setSelectedTask}
-            currentUser={currentUser}
-            activeTaskTimer={activeTaskTimer}
-        />
-    );
-}
-
-return (
         <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
             {showAllocationModal && <NewAllocationModal onClose={() => setShowAllocationModal(false)} onSave={handleCreateAllocation} clients={clients} projects={projects} />}
             {showProjectModal && <NewProjectModal onClose={() => setShowProjectModal(false)} onSave={handleCreateProject} clients={clients} />}
@@ -260,7 +260,7 @@ return (
                             <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Tasks</button>
                             <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Projects</button>
                         </div>
-                        </div>
+
                         {activeTab === 'tasks' && tasks.length > 0 && (
                             <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Tasks</button>
                         )}
@@ -272,9 +272,7 @@ return (
                             requiredColumns={['Client Name']}
                             onImport={handleImportTasks}
                         />
-                            requiredColumns={['Client Name']}
-                            onImport={handleImportTasks}
-                        />
+
                         {activeTab === 'tasks' ? (
                             <button onClick={() => setShowAllocationModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Task</button>
                         ) : (
@@ -312,17 +310,17 @@ return (
             </div>
 
             {
-    selectedTask && (
-        <PerformTaskModal
-            task={selectedTask}
-            onClose={() => setSelectedTask(null)}
-            onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
-            activeTaskTimer={activeTaskTimer}
-            setActiveTaskTimer={setActiveTaskTimer}
-            currentUser={currentUser}
-        />
-    )
-}
+                selectedTask && (
+                    <PerformTaskModal
+                        task={selectedTask}
+                        onClose={() => setSelectedTask(null)}
+                        onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
+                        activeTaskTimer={activeTaskTimer}
+                        setActiveTaskTimer={setActiveTaskTimer}
+                        currentUser={currentUser}
+                    />
+                )
+            }
         </div >
     );
 };
