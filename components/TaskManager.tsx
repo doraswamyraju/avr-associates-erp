@@ -409,13 +409,22 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
 
                 <div className="space-y-4">
                     {preSelectedProjectId ? (
-                        // Context-aware simplified view
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-6">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Client</p><p className="font-bold text-slate-800">{clientName}</p></div>
-                                <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Project</p><p className="font-bold text-slate-800">{projects.find(p => p.id === projectId)?.name}</p></div>
+                        // Context-aware simplified view (Disabled Inputs)
+                        <>
+                            <div className="relative">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Client Entity</label>
+                                <input disabled className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 outline-none cursor-not-allowed" value={clientName} />
                             </div>
-                        </div>
+
+                            {/* Service Type Hidden as requested */}
+
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
+                                <select disabled className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 outline-none cursor-not-allowed" value={projectId}>
+                                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+                        </>
                     ) : (
                         // Standard full view
                         <>
@@ -438,6 +447,13 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                                     {['Income Tax Filing', 'GST Compliance', 'Audit Assurance', 'Company Law', 'Consultancy'].map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                             </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
+                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)}>
+                                    <option value="">-- Standalone Task --</option>
+                                    {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
+                                </select>
+                            </div>
                         </>
                     )}
 
@@ -445,16 +461,6 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Due Date</label>
                         <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </div>
-
-                    {!preSelectedProjectId && (
-                        <div>
-                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
-                            <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)}>
-                                <option value="">-- Standalone Task --</option>
-                                {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
-                            </select>
-                        </div>
-                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
