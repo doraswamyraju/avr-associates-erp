@@ -58,6 +58,8 @@ switch ($method) {
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);
         }
+        break;
+
     case 'DELETE':
         if (isset($_GET['all']) && $_GET['all'] == 'true') {
             $sql = "DELETE FROM projects";
