@@ -2,7 +2,7 @@
 
 import { Client, Project, Task, Invoice, Staff } from '../../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost/avr-associates-erp/api');
 
 export const api = {
     // Clients
