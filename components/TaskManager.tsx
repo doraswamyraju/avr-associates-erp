@@ -21,309 +21,9 @@ interface TaskManagerProps {
     setActiveTaskTimer?: (timer: { task: Task, startTime: Date } | null) => void;
 }
 
-const TaskManager: React.FC<TaskManagerProps> = ({
-    selectedBranch,
-    currentUser,
-    quickAction,
-    onQuickActionHandled,
-    preSelectedAssignee,
-    activeTaskTimer,
-    setActiveTaskTimer
-}) => {
-    const [activeTab, setActiveTab] = useState<'tasks' | 'projects'>('tasks');
-    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [clients, setClients] = useState<Client[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [assigneeFilter, setAssigneeFilter] = useState<string | null>(preSelectedAssignee || null);
-    const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
-    const [textSearch, setTextSearch] = useState('');
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-    const [showAllocationModal, setShowAllocationModal] = useState(false);
-    const [showProjectModal, setShowProjectModal] = useState(false);
-
-    useEffect(() => {
-        if (quickAction === 'NEW_TASK') {
-            setShowAllocationModal(true);
-            onQuickActionHandled?.();
-        } else if (quickAction === 'NEW_PROJECT') {
-            setShowProjectModal(true);
-            onQuickActionHandled?.();
-        }
-    }, [quickAction]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                const [tasksData, projectsData, clientsData] = await Promise.all([
-                    api.getTasks(),
-                    api.getProjects(),
-                    api.getClients()
-                ]);
-                setTasks(tasksData);
-                setProjects(projectsData);
-                setClients(clientsData);
-            } catch (error) {
-                console.error("Failed to fetch data", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, []);
-
-    const filteredTasks = tasks.filter(task => {
-        const branchMatch = selectedBranch === BranchName.ALL || task.branch === selectedBranch;
-        const roleMatch = currentUser?.role === UserRole.EMPLOYEE ? task.assignedTo === currentUser.name : (assigneeFilter ? task.assignedTo === assigneeFilter : true);
-        const statusMatch = statusFilter === 'All' || task.status === statusFilter;
-        const textMatch = !textSearch || task.clientName.toLowerCase().includes(textSearch.toLowerCase()) || task.serviceType.toLowerCase().includes(textSearch.toLowerCase());
-        return branchMatch && roleMatch && statusMatch && textMatch;
-    });
-
-    const handleDeleteAllTasks = async () => {
-        if (confirm("CRITICAL WARNING: This will delete ALL tasks/engagements from the database. This action cannot be undone. Are you sure?")) {
-            try {
-                await api.deleteAllTasks();
-                setTasks([]);
-                alert("System purged. All tasks have been removed.");
-            } catch (e) {
-                console.error("Failed to delete all", e);
-                alert("Failed to delete tasks.");
-            }
-        }
-    }
 
 
-    const handleDeleteAllProjects = async () => {
-        if (confirm("CRITICAL WARNING: This will delete ALL PROJECTS and their linked data. This cannot be undone. Are you sure?")) {
-            try {
-                await api.deleteAllProjects();
-                setProjects([]);
-                alert("Projects purged.");
-            } catch (e) {
-                console.error("Failed to delete projects", e);
-            }
-        }
-    };
 
-    const handleCreateAllocation = async (data: any) => {
-        const matchedClient = clients.find(c => c.name === data.clientName);
-        if (!matchedClient) { alert("Please select a valid client from the list."); return; }
-
-        try {
-            await api.createTask({
-                clientName: matchedClient.name,
-                clientId: matchedClient.id,
-                projectId: data.projectId,
-                serviceType: data.serviceType,
-                dueDate: data.dueDate,
-                priority: data.priority,
-                status: TaskStatus.NEW,
-                branch: matchedClient.branch,
-                assignedTo: '',
-                period: 'FY24-25',
-                slaProgress: 0,
-                totalTrackedMinutes: 0
-            } as any);
-
-            setShowAllocationModal(false);
-            const updated = await api.getTasks();
-            setTasks(updated);
-            alert("Allocation Created Successfully");
-        } catch (e: any) {
-            console.error("Failed create task", e);
-            alert("Failed to create allocation: " + e.message);
-        }
-    }
-
-
-    const handleCreateProject = async (data: any) => {
-        const matchedClient = clients.find(c => c.name === data.clientName);
-        if (!matchedClient) { alert("Please select a valid client."); return; }
-
-        try {
-            await api.createProject({
-                name: data.name,
-                description: data.description,
-                clientId: matchedClient.id,
-                status: ProjectStatus.PLANNING, // Default
-                startDate: new Date().toISOString().split('T')[0],
-                branch: matchedClient.branch,
-                priority: Priority.MEDIUM,
-                budget: Number(data.budget) || 0,
-                totalHoursTracked: 0
-            } as any);
-
-            setShowProjectModal(false);
-            const updated = await api.getProjects();
-            setProjects(updated);
-            alert("Project Created Successfully");
-        } catch (e: any) {
-            console.error("Failed create project", e);
-            alert("Failed to create project: " + e.message);
-        }
-    };
-
-    const handleImportTasks = async (data: any[]) => {
-        let successCount = 0;
-        const newTasks: Partial<Task>[] = [];
-
-        // 1. Prepare data
-        for (const row of data) {
-            const clientName = row['Client Name'] || row['Client'] || row['client'];
-            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
-
-            if (clientName && matchedClient) {
-                newTasks.push({
-                    clientName: matchedClient.name,
-                    clientId: matchedClient.id,
-                    serviceType: row['Service'] || row['service'] || 'General Advisory',
-                    dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
-                    status: TaskStatus.NEW,
-                    priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
-                    assignedTo: row['Assignee'] || row['assignee'] || '',
-                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
-                    period: row['Period'] || row['period'] || 'FY24-25',
-                    slaProgress: 0,
-                    totalTrackedMinutes: 0
-                });
-            }
-        }
-
-        if (newTasks.length === 0) {
-            alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
-            return;
-        }
-
-        // 2. Batch process
-        const BATCH_SIZE = 500;
-        const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
-
-        // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
-        // Ideally use a loading state, but for quick fix:
-        console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
-
-        try {
-            for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
-                const batch = newTasks.slice(i, i + BATCH_SIZE);
-                await api.createTasksBatch(batch as any);
-                successCount += batch.length;
-                console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
-            }
-
-            // Refresh tasks
-            const updatedTasks = await api.getTasks();
-            setTasks(updatedTasks);
-            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
-        } catch (e: any) {
-            console.error("Batch import failed", e);
-            alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
-        }
-    };
-
-    const getProjectProgress = (projectId: string) => {
-        const projectTasks = tasks.filter(t => t.projectId === projectId);
-        if (projectTasks.length === 0) return 0;
-        const completed = projectTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
-        return Math.round((completed / projectTasks.length) * 100);
-    };
-
-    if (selectedProject) {
-        return (
-            <ProjectDetailView
-                project={selectedProject}
-                tasks={tasks.filter(t => t.projectId === selectedProject.id)}
-                onBack={() => setSelectedProject(null)}
-                onTaskClick={setSelectedTask}
-                currentUser={currentUser}
-                activeTaskTimer={activeTaskTimer}
-            />
-        );
-    }
-
-    return (
-        <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
-            {showAllocationModal && <NewAllocationModal onClose={() => setShowAllocationModal(false)} onSave={handleCreateAllocation} clients={clients} projects={projects} />}
-            {showProjectModal && <NewProjectModal onClose={() => setShowProjectModal(false)} onSave={handleCreateProject} clients={clients} />}
-            {loading && <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}
-            <div className="p-6 bg-white border-b border-slate-200 shrink-0">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">{activeTab === 'projects' ? 'Projects Portfolio' : 'Tasks Board'}</h2>
-                        <p className="text-slate-500 text-sm font-medium">Precisely audit staff effort across all client portfolios.</p>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="bg-slate-100 border border-slate-200 rounded-xl p-1 flex shadow-sm">
-                            <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Tasks</button>
-                            <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Projects</button>
-                        </div>
-
-                        {activeTab === 'tasks' && tasks.length > 0 && (
-                            <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Tasks</button>
-                        )}
-                        {activeTab === 'projects' && projects.length > 0 && (
-                            <button onClick={handleDeleteAllProjects} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Projects</button>
-                        )}
-                        <ExcelImporter
-                            templateName="Tasks"
-                            requiredColumns={['Client Name']}
-                            onImport={handleImportTasks}
-                        />
-
-                        {activeTab === 'tasks' ? (
-                            <button onClick={() => setShowAllocationModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Task</button>
-                        ) : (
-                            <button onClick={() => setShowProjectModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Project</button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row gap-4 items-center">
-                    <div className="relative flex-1 w-full"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="Search by service, staff or entity..." value={textSearch} onChange={(e) => setTextSearch(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm" /></div>
-                    <div className="flex gap-3 w-full md:w-auto">
-                        <select className="flex-1 md:flex-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}><option value="All">All Workflow States</option>{Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}</select>
-                        <div className="bg-slate-100 rounded-2xl p-1 flex">
-                            <button onClick={() => setViewMode('kanban')} className={`p-2 rounded-xl transition-all ${viewMode === 'kanban' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={20} /></button>
-                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><List size={20} /></button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex-1 overflow-hidden relative">
-                {activeTab === 'tasks' ? (
-                    <div className="h-full overflow-y-auto p-6 min-h-0 relative">
-                        <TaskBoard tasks={filteredTasks} viewMode={viewMode} onTaskClick={setSelectedTask} activeTaskTimer={activeTaskTimer} />
-                    </div>
-                ) : (
-                    <div className="h-full overflow-y-auto p-6 min-h-0 relative">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
-                            {projects.map(project => (
-                                <ProjectCard key={project.id} project={project} progress={getProjectProgress(project.id)} onClick={() => setSelectedProject(project)} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {
-                selectedTask && (
-                    <PerformTaskModal
-                        task={selectedTask}
-                        onClose={() => setSelectedTask(null)}
-                        onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
-                        activeTaskTimer={activeTaskTimer}
-                        setActiveTaskTimer={setActiveTaskTimer}
-                        currentUser={currentUser}
-                    />
-                )
-            }
-        </div >
-    );
-};
 
 const TaskBoard: React.FC<{ tasks: Task[], viewMode: 'list' | 'kanban', onTaskClick: (t: Task) => void, activeTaskTimer: any }> = ({ tasks, viewMode, onTaskClick, activeTaskTimer }) => {
     if (viewMode === 'list') {
@@ -403,7 +103,7 @@ const ProjectCard: React.FC<{ project: Project, progress: number, onClick: () =>
     );
 };
 
-const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () => void, onTaskClick: (t: Task) => void, currentUser?: User, activeTaskTimer: any }> = ({ project, tasks, onBack, onTaskClick, currentUser, activeTaskTimer }) => {
+const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () => void, onTaskClick: (t: Task) => void, currentUser?: User, activeTaskTimer: any, onNewTask: () => void }> = ({ project, tasks, onBack, onTaskClick, currentUser, activeTaskTimer, onNewTask }) => {
     const totalHours = tasks.reduce((acc, t) => acc + (t.totalTrackedMinutes / 60), 0);
     const estimatedCost = totalHours * 500;
     const profitability = project.budget ? project.budget - estimatedCost : 0;
@@ -477,7 +177,7 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
 
                 {activeTab === 'tasks' && (
                     <div className="h-full flex flex-col">
-                        <div className="p-6 flex items-center justify-between shrink-0"><h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><Layers size={18} className="text-indigo-600" /> Engagement Tasks</h3>{currentUser?.role !== UserRole.CLIENT && <button className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}</div>
+                        <div className="p-6 flex items-center justify-between shrink-0"><h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><Layers size={18} className="text-indigo-600" /> Engagement Tasks</h3>{currentUser?.role !== UserRole.CLIENT && <button onClick={onNewTask} className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}</div>
                         <div className="flex-1 overflow-y-auto px-6 pb-20"><TaskBoard tasks={tasks} viewMode="list" onTaskClick={onTaskClick} activeTaskTimer={activeTaskTimer} /></div>
                     </div>
                 )}
@@ -649,13 +349,26 @@ const PerformTaskModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t
     );
 };
 
-const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[], projects: Project[] }> = ({ onClose, onSave, clients, projects }) => {
+const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[], projects: Project[], staff: string[], preSelectedProjectId?: string | null }> = ({ onClose, onSave, clients, projects, staff, preSelectedProjectId }) => {
     const [clientName, setClientName] = useState('');
     const [serviceType, setServiceType] = useState('Income Tax Filing');
     const [dueDate, setDueDate] = useState('');
     const [priority, setPriority] = useState('Medium');
-    const [projectId, setProjectId] = useState('');
+    const [projectId, setProjectId] = useState(preSelectedProjectId || '');
+    const [assignedTo, setAssignedTo] = useState('');
     const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+
+    useEffect(() => {
+        if (preSelectedProjectId) {
+            const project = projects.find(p => p.id === preSelectedProjectId);
+            if (project) {
+                setProjectId(project.id);
+                // Also auto-fill client name
+                const client = clients.find(c => c.id === project.clientId);
+                if (client) setClientName(client.name);
+            }
+        }
+    }, [preSelectedProjectId, projects, clients]);
 
     useEffect(() => {
         if (clientName) {
@@ -709,32 +422,40 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                         <input type="date" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={dueDate} onChange={e => setDueDate(e.target.value)} />
                     </div>
                     <div>
-                        {clientProjects.length > 0 && (
-                            <div className="mb-4">
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
-                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)}>
-                                    <option value="">-- Standalone Task --</option>
-                                    {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        <div>
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
+                            <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)} disabled={!!preSelectedProjectId}>
+                                <option value="">-- Standalone Task --</option>
+                                {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
+                            </select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
+                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
+                                    <option>Low</option><option>Medium</option><option>High</option>
                                 </select>
                             </div>
-                        )}
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Priority</label>
-                        <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={priority} onChange={e => setPriority(e.target.value)}>
-                            <option>Low</option><option>Medium</option><option>High</option>
-                        </select>
+                            <div>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Assign To</label>
+                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
+                                    <option value="">-- Unassigned --</option>
+                                    {staff.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100">
-                    <button onClick={onClose} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
-                    <button onClick={() => onSave({ clientName, serviceType, dueDate, priority, projectId })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Allocate</button>
+                    <div className="flex gap-4 mt-8 pt-6 border-t border-slate-100">
+                        <button onClick={onClose} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+                        <button onClick={() => onSave({ clientName, serviceType, dueDate, priority, projectId, assignedTo })} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg active:scale-95 transition-all">Allocate</button>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
-
-export default TaskManager;
 
 const NewProjectModal: React.FC<{ onClose: () => void, onSave: (data: any) => void, clients: Client[] }> = ({ onClose, onSave, clients }) => {
     const [clientName, setClientName] = useState('');
@@ -792,3 +513,319 @@ const NewProjectModal: React.FC<{ onClose: () => void, onSave: (data: any) => vo
         </div>
     );
 };
+
+
+const TaskManager: React.FC<TaskManagerProps> = ({
+    selectedBranch,
+    currentUser,
+    quickAction,
+    onQuickActionHandled,
+    preSelectedAssignee,
+    activeTaskTimer,
+    setActiveTaskTimer
+}) => {
+    const [activeTab, setActiveTab] = useState<'tasks' | 'projects'>('tasks');
+    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [assigneeFilter, setAssigneeFilter] = useState<string | null>(preSelectedAssignee || null);
+    const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
+    const [textSearch, setTextSearch] = useState('');
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [showAllocationModal, setShowAllocationModal] = useState(false);
+    const [showProjectModal, setShowProjectModal] = useState(false);
+    const [preSelectedProjectForTask, setPreSelectedProjectForTask] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (quickAction === 'NEW_TASK') {
+            setShowAllocationModal(true);
+            onQuickActionHandled?.();
+        } else if (quickAction === 'NEW_PROJECT') {
+            setShowProjectModal(true);
+            onQuickActionHandled?.();
+        }
+    }, [quickAction]);
+
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                const [tasksData, projectsData, clientsData] = await Promise.all([
+                    api.getTasks(),
+                    api.getProjects(),
+                    api.getClients()
+                ]);
+                setTasks(tasksData);
+                setProjects(projectsData);
+                setClients(clientsData);
+            } catch (error) {
+                console.error("Failed to fetch data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
+    }, []);
+
+    const filteredTasks = tasks.filter(task => {
+        const branchMatch = selectedBranch === BranchName.ALL || task.branch === selectedBranch;
+        const roleMatch = currentUser?.role === UserRole.EMPLOYEE ? task.assignedTo === currentUser.name : (assigneeFilter ? task.assignedTo === assigneeFilter : true);
+        const statusMatch = statusFilter === 'All' || task.status === statusFilter;
+        const textMatch = !textSearch || task.clientName.toLowerCase().includes(textSearch.toLowerCase()) || task.serviceType.toLowerCase().includes(textSearch.toLowerCase());
+        return branchMatch && roleMatch && statusMatch && textMatch;
+    });
+
+    const handleDeleteAllTasks = async () => {
+        if (confirm("CRITICAL WARNING: This will delete ALL tasks/engagements from the database. This action cannot be undone. Are you sure?")) {
+            try {
+                await api.deleteAllTasks();
+                setTasks([]);
+                alert("System purged. All tasks have been removed.");
+            } catch (e) {
+                console.error("Failed to delete all", e);
+                alert("Failed to delete tasks.");
+            }
+        }
+    }
+
+
+    const handleDeleteAllProjects = async () => {
+        if (confirm("CRITICAL WARNING: This will delete ALL PROJECTS and their linked data. This cannot be undone. Are you sure?")) {
+            try {
+                await api.deleteAllProjects();
+                setProjects([]);
+                alert("Projects purged.");
+            } catch (e) {
+                console.error("Failed to delete projects", e);
+            }
+        }
+    };
+
+    const handleCreateAllocation = async (data: any) => {
+        const matchedClient = clients.find(c => c.name === data.clientName);
+        if (!matchedClient) { alert("Please select a valid client from the list."); return; }
+
+        try {
+            await api.createTask({
+                clientName: matchedClient.name,
+                clientId: matchedClient.id,
+                projectId: data.projectId,
+                serviceType: data.serviceType,
+                dueDate: data.dueDate,
+                priority: data.priority,
+                status: TaskStatus.NEW,
+                branch: matchedClient.branch,
+                assignedTo: data.assignedTo || '',
+                period: 'FY24-25',
+                slaProgress: 0,
+                totalTrackedMinutes: 0
+            } as any);
+
+            setShowAllocationModal(false);
+            const updated = await api.getTasks();
+            setTasks(updated);
+            alert("Allocation Created Successfully");
+        } catch (e: any) {
+            console.error("Failed create task", e);
+            alert("Failed to create allocation: " + e.message);
+        }
+    }
+
+
+    const handleCreateProject = async (data: any) => {
+        const matchedClient = clients.find(c => c.name === data.clientName);
+        if (!matchedClient) { alert("Please select a valid client."); return; }
+
+        try {
+            await api.createProject({
+                name: data.name,
+                description: data.description,
+                clientId: matchedClient.id,
+                status: ProjectStatus.PLANNING, // Default
+                startDate: new Date().toISOString().split('T')[0],
+                branch: matchedClient.branch,
+                priority: Priority.MEDIUM,
+                budget: Number(data.budget) || 0,
+                totalHoursTracked: 0
+            } as any);
+
+            setShowProjectModal(false);
+            const updated = await api.getProjects();
+            setProjects(updated);
+            alert("Project Created Successfully");
+        } catch (e: any) {
+            console.error("Failed create project", e);
+            alert("Failed to create project: " + e.message);
+        }
+    };
+
+    const handleImportTasks = async (data: any[]) => {
+        let successCount = 0;
+        const newTasks: Partial<Task>[] = [];
+
+        // 1. Prepare data
+        for (const row of data) {
+            const clientName = row['Client Name'] || row['Client'] || row['client'];
+            const matchedClient = clients.find(c => c.name.toLowerCase() === (clientName || '').trim().toLowerCase());
+
+            if (clientName && matchedClient) {
+                newTasks.push({
+                    clientName: matchedClient.name,
+                    clientId: matchedClient.id,
+                    serviceType: row['Service'] || row['service'] || 'General Advisory',
+                    dueDate: row['DueDate'] || row['dueDate'] || new Date().toISOString().split('T')[0],
+                    status: TaskStatus.NEW,
+                    priority: (row['Priority'] || row['priority'] || 'Medium') as Priority,
+                    assignedTo: row['Assignee'] || row['assignee'] || '',
+                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                    period: row['Period'] || row['period'] || 'FY24-25',
+                    slaProgress: 0,
+                    totalTrackedMinutes: 0
+                });
+            }
+        }
+
+        if (newTasks.length === 0) {
+            alert("No matching clients found for import. Ensure Client names match exactly with the System Directory.");
+            return;
+        }
+
+        // 2. Batch process
+        const BATCH_SIZE = 500;
+        const totalBatches = Math.ceil(newTasks.length / BATCH_SIZE);
+
+        // Show loading via a temporary alert or better UI (using window.confirm for now to block or simple logic)
+        // Ideally use a loading state, but for quick fix:
+        console.log(`Starting import of ${newTasks.length} tasks in ${totalBatches} batches...`);
+
+        try {
+            for (let i = 0; i < newTasks.length; i += BATCH_SIZE) {
+                const batch = newTasks.slice(i, i + BATCH_SIZE);
+                await api.createTasksBatch(batch as any);
+                successCount += batch.length;
+                console.log(`Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches}`);
+            }
+
+            // Refresh tasks
+            const updatedTasks = await api.getTasks();
+            setTasks(updatedTasks);
+            alert(`Successfully imported and linked ${successCount} tasks to existing clients.`);
+        } catch (e: any) {
+            console.error("Batch import failed", e);
+            alert(`Import failed partially. Processed ${successCount} tasks before error: ${e.message}`);
+        }
+    };
+
+    const getProjectProgress = (projectId: string) => {
+        const projectTasks = tasks.filter(t => t.projectId === projectId);
+        if (projectTasks.length === 0) return 0;
+        const completed = projectTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
+        return Math.round((completed / projectTasks.length) * 100);
+    };
+
+    if (selectedProject) {
+        return (
+            <ProjectDetailView
+                project={selectedProject}
+                tasks={tasks.filter(t => t.projectId === selectedProject.id)}
+                onBack={() => setSelectedProject(null)}
+                onTaskClick={setSelectedTask}
+                currentUser={currentUser}
+                activeTaskTimer={activeTaskTimer}
+                onNewTask={() => {
+                    setPreSelectedProjectForTask(selectedProject.id);
+                    setShowAllocationModal(true);
+                }}
+            />
+        );
+    }
+
+    return (
+        <div className="h-full flex flex-col bg-slate-50 overflow-hidden relative">
+            {showAllocationModal && <NewAllocationModal
+                onClose={() => { setShowAllocationModal(false); setPreSelectedProjectForTask(null); }}
+                onSave={handleCreateAllocation}
+                clients={clients}
+                projects={projects}
+                staff={MOCK_STAFF}
+                preSelectedProjectId={preSelectedProjectForTask}
+            />}
+            {showProjectModal && <NewProjectModal onClose={() => setShowProjectModal(false)} onSave={handleCreateProject} clients={clients} />}
+            {loading && <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}
+            <div className="p-6 bg-white border-b border-slate-200 shrink-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">{activeTab === 'projects' ? 'Projects Portfolio' : 'Tasks Board'}</h2>
+                        <p className="text-slate-500 text-sm font-medium">Precisely audit staff effort across all client portfolios.</p>
+                    </div>
+                    <div className="flex gap-3">
+                        <div className="bg-slate-100 border border-slate-200 rounded-xl p-1 flex shadow-sm">
+                            <button onClick={() => setActiveTab('tasks')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'tasks' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Tasks</button>
+                            <button onClick={() => setActiveTab('projects')} className={`px-5 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'projects' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Projects</button>
+                        </div>
+
+                        {activeTab === 'tasks' && tasks.length > 0 && (
+                            <button onClick={handleDeleteAllTasks} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Tasks</button>
+                        )}
+                        {activeTab === 'projects' && projects.length > 0 && (
+                            <button onClick={handleDeleteAllProjects} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Projects</button>
+                        )}
+                        <ExcelImporter
+                            onImport={handleImportTasks}
+                        />
+
+                        {activeTab === 'tasks' ? (
+                            <button onClick={() => { setPreSelectedProjectForTask(null); setShowAllocationModal(true); }} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Task</button>
+                        ) : (
+                            <button onClick={() => setShowProjectModal(true)} className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl transition-all active:scale-95"><Plus size={16} strokeWidth={3} /> New Project</button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full"><Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" /><input type="text" placeholder="Search by service, staff or entity..." value={textSearch} onChange={(e) => setTextSearch(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm" /></div>
+                    <div className="flex gap-3 w-full md:w-auto">
+                        <select className="flex-1 md:flex-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}><option value="All">All Workflow States</option>{Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}</select>
+                        <div className="bg-slate-100 rounded-2xl p-1 flex">
+                            <button onClick={() => setViewMode('kanban')} className={`p-2 rounded-xl transition-all ${viewMode === 'kanban' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={20} /></button>
+                            <button onClick={() => setViewMode('list')} className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}><List size={20} /></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden relative">
+                {activeTab === 'tasks' ? (
+                    <div className="h-full overflow-y-auto p-6 min-h-0 relative">
+                        <TaskBoard tasks={filteredTasks} viewMode={viewMode} onTaskClick={setSelectedTask} activeTaskTimer={activeTaskTimer} />
+                    </div>
+                ) : (
+                    <div className="h-full overflow-y-auto p-6 min-h-0 relative">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+                            {projects.map(project => (
+                                <ProjectCard key={project.id} project={project} progress={getProjectProgress(project.id)} onClick={() => setSelectedProject(project)} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {
+                selectedTask && (
+                    <PerformTaskModal
+                        task={selectedTask}
+                        onClose={() => setSelectedTask(null)}
+                        onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
+                        activeTaskTimer={activeTaskTimer}
+                        setActiveTaskTimer={setActiveTaskTimer}
+                        currentUser={currentUser}
+                    />
+                )
+            }
+        </div >
+    );
+};
+export default TaskManager;
