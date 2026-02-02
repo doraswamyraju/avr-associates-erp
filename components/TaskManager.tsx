@@ -612,13 +612,13 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             await api.createTask({
                 clientName: matchedClient.name,
                 clientId: matchedClient.id,
-                projectId: data.projectId,
+                projectId: data.projectId || undefined,
                 serviceType: data.serviceType,
                 dueDate: data.dueDate,
                 priority: data.priority,
                 status: TaskStatus.NEW,
                 branch: matchedClient.branch,
-                assignedTo: data.assignedTo || '',
+                assignedTo: data.assignedTo || undefined,
                 period: 'FY24-25',
                 slaProgress: 0,
                 totalTrackedMinutes: 0
