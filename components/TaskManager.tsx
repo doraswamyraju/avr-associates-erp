@@ -138,7 +138,7 @@ const handleCreateAllocation = async (data: any) => {
         alert("Failed to create allocation: " + e.message);
     }
 }
-    };
+
 
 const handleCreateProject = async (data: any) => {
     const matchedClient = clients.find(c => c.name === data.clientName);
