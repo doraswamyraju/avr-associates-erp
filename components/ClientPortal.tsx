@@ -110,36 +110,86 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
 
                         {/* Stats Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Briefcase size={20} /></div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">Ongoing</span>
+                                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Briefcase size={24} /></div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Engagements</span>
                                 </div>
-                                <h3 className="text-2xl font-bold text-slate-800">{activeServicesCount}</h3>
-                                <p className="text-sm text-slate-500">Active Services</p>
+                                <h3 className="text-3xl font-black text-slate-800 tracking-tight">{activeServicesCount}</h3>
+                                <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: '65%' }}></div>
+                                </div>
+                                <p className="text-[10px] font-medium text-slate-400 mt-2 uppercase tracking-widest">Overall Progress: 65%</p>
                             </div>
-                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><FileText size={20} /></div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">Vault</span>
+                                    <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><FileText size={24} /></div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Vault</span>
                                 </div>
-                                <h3 className="text-2xl font-bold text-slate-800">{myDocuments.length}</h3>
-                                <p className="text-sm text-slate-500">Documents Stored</p>
+                                <h3 className="text-3xl font-black text-slate-800 tracking-tight">{myDocuments.length}</h3>
+                                <p className="text-[10px] font-medium text-slate-400 mt-2 uppercase tracking-widest">Last upload yesterday</p>
                             </div>
-                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all bg-emerald-50/10">
                                 <div className="flex justify-between items-start mb-4">
-                                    <div className="p-2 bg-green-50 text-green-600 rounded-lg"><CreditCard size={20} /></div>
-                                    <span className="text-xs font-bold text-slate-400 uppercase">Outstanding</span>
+                                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><CreditCard size={24} /></div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment Status</span>
                                 </div>
-                                <h3 className="text-2xl font-bold text-slate-800">₹{unpaidAmount.toLocaleString()}</h3>
-                                <p className="text-sm text-slate-500">To Pay</p>
+                                <h3 className="text-3xl font-black text-slate-800 tracking-tight">₹{unpaidAmount.toLocaleString()}</h3>
+                                <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase tracking-widest">{unpaidAmount > 0 ? 'Action Required' : 'All Clear'}</p>
                             </div>
                         </div>
 
-                        {/* Account Manager and Support Options */}
+                        {/* Compliance Traffic Lights */}
+                        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-800 tracking-tight uppercase">Compliance Health</h3>
+                                    <p className="text-xs font-medium text-slate-400">Monthly statutory filing status</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-100">
+                                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                        Filed
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-100">
+                                        <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
+                                        Processing
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-rose-100">
+                                        <div className="w-1.5 h-1.5 bg-rose-500 rounded-full"></div>
+                                        Pending
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {[
+                                    { label: 'GST Returns', status: 'filed', date: 'Jan 2024' },
+                                    { label: 'Income Tax', status: 'processing', date: 'FY 23-24' },
+                                    { label: 'TDS Filings', status: 'pending', date: 'Q3 2024' },
+                                    { label: 'MCA/ROC', status: 'filed', date: 'Annual' }
+                                ].map((item, idx) => (
+                                    <div key={idx} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                                            <p className="text-xs font-bold text-slate-600">{item.date}</p>
+                                        </div>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-4 border-white shadow-sm ${item.status === 'filed' ? 'bg-green-500' :
+                                                item.status === 'processing' ? 'bg-amber-500' : 'bg-rose-500'
+                                            }`}>
+                                            {item.status === 'filed' && <CheckCircle2 size={14} className="text-white" />}
+                                            {item.status === 'processing' && <Clock size={14} className="text-white" />}
+                                            {item.status === 'pending' && <AlertCircle size={14} className="text-white" />}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Quick Actions & Manager */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             {/* Account Manager Card */}
-                            <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                            <div className="lg:col-span-1 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col group hover:shadow-xl transition-all duration-500">
                                 <div className="p-4 border-b border-slate-100 bg-slate-50/50">
                                     <h3 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
                                         <Headphones size={14} className="text-indigo-600" />
