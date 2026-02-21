@@ -5,6 +5,22 @@ import { Client, Project, Task, Invoice, Staff } from '../../types';
 const API_BASE_URL = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost/avr-associates-erp/api');
 
 export const api = {
+    // Auth
+    auth: {
+        login: async (credentials: any): Promise<any> => {
+            const response = await fetch(`${API_BASE_URL}/auth.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credentials) // username and password
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Login failed');
+            }
+            return response.json();
+        }
+    },
+
     // Clients
     getClients: async (): Promise<Client[]> => {
         const response = await fetch(`${API_BASE_URL}/clients.php`);

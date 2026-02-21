@@ -6,6 +6,8 @@ USE avr_erp_db;
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(50) PRIMARY KEY,
+    username VARCHAR(100) UNIQUE,
+    password_hash VARCHAR(255),
     name VARCHAR(100) NOT NULL,
     role ENUM('Admin', 'Employee', 'Client') NOT NULL,
     avatar VARCHAR(255),

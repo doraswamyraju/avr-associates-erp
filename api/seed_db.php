@@ -6,11 +6,27 @@ try {
 
     // Clear existing data
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 0");
-    $tables = ['clients', 'projects', 'tasks', 'staff', 'invoices', 'appointments', 'client_documents'];
+    $tables = ['users', 'clients', 'projects', 'tasks', 'staff', 'invoices', 'appointments', 'client_documents'];
     foreach ($tables as $table) {
         $pdo->exec("DELETE FROM $table");
     }
     $pdo->exec("SET FOREIGN_KEY_CHECKS = 1");
+
+    // Seed Users
+    $defaultPasswordAdmin = password_hash('admin', PASSWORD_DEFAULT);
+    $defaultPasswordEmployee = password_hash('employee', PASSWORD_DEFAULT);
+    $defaultPasswordClient = password_hash('client', PASSWORD_DEFAULT);
+
+    $users = [
+        ['ADM001', 'admin', $defaultPasswordAdmin, 'Suresh Kumar', 'Admin', 'https://picsum.photos/40/40?random=1', NULL, 'All Branches'],
+        ['EMP001', 'employee', $defaultPasswordEmployee, 'Mahesh B', 'Employee', 'https://picsum.photos/40/40?random=3', NULL, 'Versatile'],
+        ['CLI001', 'client', $defaultPasswordClient, 'Versatile Tech', 'Client', NULL, 'C004', 'Versatile']
+    ];
+
+    $stmt = $pdo->prepare("INSERT INTO users (id, username, password_hash, name, role, avatar, client_id, branch) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    foreach ($users as $u) {
+        $stmt->execute($u);
+    }
 
     // Seed Clients
     $clients = [
