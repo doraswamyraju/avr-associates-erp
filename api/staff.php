@@ -68,7 +68,7 @@ switch ($method) {
                         VALUES (:id, :username, :password_hash, :name, 'Employee', :avatar, :branch)";
             
             $stmtUser = $pdo->prepare($sqlUser);
-            $stmtUser.execute([
+            $stmtUser->execute([
                 ':id' => $id,
                 ':username' => $data['username'],
                 ':password_hash' => $passwordHash,
