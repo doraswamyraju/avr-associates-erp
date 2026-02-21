@@ -1,22 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
-import { MOCK_STAFF, MOCK_TASKS } from '../constants';
+import { MOCK_TASKS } from '../constants';
 import { BranchName, Staff, TaskStatus } from '../types';
 import {
     Search, Plus, MapPin, Mail, Phone, MoreHorizontal, Clock,
     AtSign, Briefcase, User, ChevronRight, List, LayoutGrid,
-    IndianRupee, TrendingUp, ShieldCheck, Zap
+    IndianRupee, TrendingUp, ShieldCheck, Zap, AlertCircle
 } from 'lucide-react';
+import { api } from '../src/services/api';
 
 interface StaffManagerProps {
     selectedBranch: BranchName;
 }
 
 const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
-    const [staffList, setStaffList] = useState<Staff[]>(MOCK_STAFF);
+    const [staffList, setStaffList] = useState<Staff[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    const fetchStaff = async () => {
+        setIsLoading(true);
+        try {
+            const data = await api.getStaff();
+            setStaffList(data);
+        } catch (error) {
+            console.error('Failed to fetch staff:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchStaff();
+    }, []);
 
     const filteredStaff = staffList.filter(staff => {
         const matchesBranch = selectedBranch === BranchName.ALL || staff.branch === selectedBranch;
@@ -205,40 +223,114 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                 )}
                 <div className="h-12 w-full"></div>
             </div>
-            {isAddModalOpen && <AddStaffModal onClose={() => setIsAddModalOpen(false)} onAdd={(s) => setStaffList([...staffList, s])} />}
+            {isAddModalOpen && <AddStaffModal onClose={() => setIsAddModalOpen(false)} onAdd={() => { setIsAddModalOpen(false); fetchStaff(); }} />}
         </div>
     );
 };
 
-const AddStaffModal: React.FC<{ onClose: () => void, onAdd: (s: Staff) => void }> = ({ onClose, onAdd }) => {
-    const [formData, setFormData] = useState({ name: '', role: '', branch: BranchName.RAVULAPALEM, email: '', password: '', rate: 200 });
-    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onAdd({ id: `S${Math.floor(Math.random() * 900) + 100}`, name: formData.name, role: formData.role, branch: formData.branch, email: formData.email, avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name)}&background=random&bold=true`, isClockedIn: false, hourlyRate: formData.rate, mtdTrackedHours: 0 }); onClose(); };
+const AddStaffModal: React.FC<{ onClose: () => void, onAdd: () => void }> = ({ onClose, onAdd }) => {
+    const [formData, setFormData] = useState({
+        name: '',
+        username: '',
+        role: '',
+        branch: BranchName.RAVULAPALEM,
+        email: '',
+        password: '',
+        rate: 200
+    });
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            await api.createStaff({
+                name: formData.name,
+                username: formData.username,
+                role: formData.role,
+                branch: formData.branch,
+                email: formData.email,
+                password: formData.password,
+                hourlyRate: formData.rate
+            });
+            onAdd();
+        } catch (err: any) {
+            setError(err.message || 'Failed to create employee');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/20 animate-in zoom-in-95 duration-300">
                 <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <div><h3 className="text-xl font-black text-slate-800 tracking-tight">Register Employee</h3><p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">New Staff Account</p></div>
-                    <button onClick={onClose} className="w-10 h-10 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"><MoreHorizontal size={20} className="rotate-45" /></button>
+                    <div>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tight">Register Employee</h3>
+                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">New Staff Account</p>
+                    </div>
+                    <button onClick={onClose} className="w-10 h-10 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors">
+                        <MoreHorizontal size={20} className="rotate-45" />
+                    </button>
                 </div>
+
                 <form onSubmit={handleSubmit} className="p-8 space-y-5">
-                    <div className="space-y-4">
-                        <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Full Identity" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Designation" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
-                            <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value as BranchName })}>{Object.values(BranchName).filter(b => b !== BranchName.ALL).map(b => <option key={b}>{b}</option>)}</select>
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 text-red-600 text-xs font-bold animate-in shake-1 duration-300">
+                            <AlertCircle size={16} className="shrink-0" />
+                            <p>{error}</p>
                         </div>
-                        <input required type="email" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Official Email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                    )}
+
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Personal Identity</label>
+                            <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Full Name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Account ID</label>
+                                <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Username" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Credential</label>
+                                <input required type="password" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Designation</label>
+                                <input required className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. Accountant" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Base Branch</label>
+                                <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value as BranchName })}>{Object.values(BranchName).filter(b => b !== BranchName.ALL).map(b => <option key={b}>{b}</option>)}</select>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Official Contact</label>
+                            <input required type="email" className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Email Address" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                        </div>
+
                         <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex flex-col gap-2">
-                            <label className="text-[10px] font-black uppercase text-indigo-400 tracking-widest ml-1">Hourly Billable Rate (₹)</label>
+                            <label className="text-[9px] font-black uppercase text-indigo-400 tracking-widest ml-1">Hourly Billable Rate (₹)</label>
                             <div className="relative">
                                 <IndianRupee size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-400" />
                                 <input required type="number" className="w-full pl-10 pr-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.rate} onChange={e => setFormData({ ...formData, rate: parseInt(e.target.value) })} />
                             </div>
                         </div>
                     </div>
+
                     <div className="pt-4 flex gap-4">
                         <button type="button" onClick={onClose} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
-                        <button type="submit" className="flex-2 px-10 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 shadow-xl shadow-slate-200 transition-all active:scale-95">Verify & Create</button>
+                        <button type="submit" disabled={isLoading} className="flex-2 px-10 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 shadow-xl shadow-slate-200 transition-all active:scale-95 disabled:opacity-50">
+                            {isLoading ? 'Creating...' : 'Verify & Create'}
+                        </button>
                     </div>
                 </form>
             </div>

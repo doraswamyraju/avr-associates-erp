@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BranchName, User, UserRole } from '../types';
-import { ShieldCheck, ArrowRight, AlertCircle, KeyRound, User as UserIcon } from 'lucide-react';
+import { ShieldCheck, ArrowRight, AlertCircle, KeyRound, User as UserIcon, Eye, EyeOff } from 'lucide-react';
 import { api } from '../src/services/api';
 
 interface LoginPageProps {
@@ -10,6 +10,7 @@ interface LoginPageProps {
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +27,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         try {
             const data = await api.auth.login({ username, password });
             if (data.success && data.user) {
-                // Successful login
                 onLogin({
                     id: data.user.id,
                     name: data.user.name,
@@ -44,91 +44,123 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="min-h-screen bg-[#050510] flex items-center justify-center p-4 relative overflow-hidden font-inter">
 
-            {/* Background Decorations */}
-            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 rounded-full blur-[100px]"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[100px]"></div>
+            {/* Animated Background Elements */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]"></div>
             </div>
 
-            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-white/20 relative z-10 overflow-hidden">
-
-                {/* Header Section */}
-                <div className="bg-indigo-600 p-8 text-center relative">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg transform rotate-3">
-                        <ShieldCheck size={32} className="text-indigo-600" />
+            <div className="w-full max-w-md relative z-10">
+                {/* Logo Area */}
+                <div className="flex flex-col items-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-indigo-500/20 mb-6 transform hover:rotate-6 transition-transform">
+                        <ShieldCheck size={40} className="text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold text-white mb-1">AVR Associates</h1>
-                    <p className="text-indigo-100 text-sm opacity-90">CA Practice Management ERP</p>
+                    <h1 className="text-4xl font-black text-white tracking-tight mb-2">AVR Associates</h1>
+                    <div className="flex items-center gap-2">
+                        <div className="h-px w-8 bg-slate-700"></div>
+                        <p className="text-slate-400 text-xs font-black uppercase tracking-[0.3em]">ERP Ecosystem</p>
+                        <div className="h-px w-8 bg-slate-700"></div>
+                    </div>
                 </div>
 
-                {/* Login Body */}
-                <div className="p-8">
-                    <div className="mb-6 text-center">
-                        <h2 className="text-lg font-semibold text-slate-800">Secure Sign In</h2>
-                        <p className="text-sm text-slate-500">Enter your credentials to access the portal</p>
+                <div className="bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 p-10 shadow-3xl shadow-black/50 relative overflow-hidden group animate-in zoom-in-95 duration-500">
+                    {/* Glass Shine Effect */}
+                    <div className="absolute -top-[100%] left-[-100%] w-[300%] h-[300%] bg-gradient-to-br from-white/5 via-transparent to-transparent rotate-45 pointer-events-none group-hover:translate-x-[10%] group-hover:translate-y-[10%] transition-transform duration-1000"></div>
+
+                    <div className="relative">
+                        <div className="mb-10">
+                            <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Enterprise Login</h2>
+                            <p className="text-slate-400 text-sm font-medium">Verify your credentials to continue to the workforce hub.</p>
+                        </div>
+
+                        {error && (
+                            <div className="mb-8 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-xs font-bold flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                                <AlertCircle size={16} className="shrink-0" />
+                                <p>{error}</p>
+                            </div>
+                        )}
+
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Username</label>
+                                <div className="relative group">
+                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                                        <UserIcon size={18} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-6 text-sm text-white font-medium focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-600"
+                                        placeholder="Enter account ID"
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center ml-1">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Password</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => alert('Please contact system administrator to reset your password.')}
+                                        className="text-[10px] font-black text-indigo-400 uppercase tracking-widest hover:text-indigo-300 transition-colors"
+                                    >
+                                        Forgot?
+                                    </button>
+                                </div>
+                                <div className="relative group">
+                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                                        <KeyRound size={18} />
+                                    </div>
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-14 text-sm text-white font-medium focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-600"
+                                        placeholder="••••••••"
+                                        disabled={isLoading}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors p-1"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="group relative w-full overflow-hidden rounded-2xl bg-indigo-600 py-4 text-sm font-black text-white uppercase tracking-widest shadow-2xl shadow-indigo-600/20 transition-all hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                <div className="relative z-10 flex items-center justify-center gap-3">
+                                    {isLoading ? (
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            <span>Authenticating...</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            Secure Access
+                                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" strokeWidth={3} />
+                                        </>
+                                    )}
+                                </div>
+                            </button>
+                        </form>
                     </div>
-
-                    {error && (
-                        <div className="mb-6 bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm flex items-start gap-2 animate-in fade-in">
-                            <AlertCircle size={16} className="mt-0.5 shrink-0" />
-                            <p>{error}</p>
-                        </div>
-                    )}
-
-                    <form onSubmit={handleLogin} className="space-y-5">
-
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Username</label>
-                            <div className="relative">
-                                <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
-                                    placeholder="Enter your username"
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide mb-2">Password</label>
-                            <div className="relative">
-                                <KeyRound size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
-                                    placeholder="Enter your password"
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className={`w-full py-3 mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-indigo-500/30 transition-all flex items-center justify-center gap-2 ${isLoading ? 'opacity-80 cursor-wait' : ''}`}
-                        >
-                            {isLoading ? (
-                                <span className="animate-pulse">Authenticating...</span>
-                            ) : (
-                                <>Access Dashboard <ArrowRight size={18} /></>
-                            )}
-                        </button>
-                    </form>
                 </div>
 
-                {/* Footer */}
-                <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 text-center">
-                    <p className="text-xs text-slate-400">
-                        Secure Connection • 256-bit Encryption • v2.1.0
+                <div className="mt-8 text-center animate-in fade-in duration-1000 delay-500">
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                        Protected by hardware-level security & 256-bit encryption
                     </p>
                 </div>
             </div>

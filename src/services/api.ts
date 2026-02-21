@@ -145,6 +145,19 @@ export const api = {
         return response.json();
     },
 
+    createStaff: async (staffData: any): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/staff.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(staffData)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create staff');
+        }
+        return response.json();
+    },
+
     // Documents
     uploadDocument: async (formData: FormData) => {
         const response = await fetch(`${API_BASE_URL}/documents.php`, {
