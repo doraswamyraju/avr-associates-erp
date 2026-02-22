@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
-import { MOCK_STAFF } from '../constants';
-import { BranchName, TaskStatus, Task, Priority, UserRole, User, Project, ProjectStatus, TimeLogEntry, Client } from '../types';
+import { BranchName, TaskStatus, Task, Priority, UserRole, User, Project, ProjectStatus, TimeLogEntry, Client, Staff } from '../types';
 import { StatusBadge } from './Dashboard';
 import { api } from '../src/services/api';
 import {
@@ -611,6 +610,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
+    const [staffList, setStaffList] = useState<Staff[]>([]);
     const [loading, setLoading] = useState(true);
     const [assigneeFilter, setAssigneeFilter] = useState<string | null>(preSelectedAssignee || null);
     const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
@@ -635,14 +635,16 @@ const TaskManager: React.FC<TaskManagerProps> = ({
         const loadData = async () => {
             setLoading(true);
             try {
-                const [tasksData, projectsData, clientsData] = await Promise.all([
+                const [tasksData, projectsData, clientsData, staffData] = await Promise.all([
                     api.getTasks(),
                     api.getProjects(),
-                    api.getClients()
+                    api.getClients(),
+                    api.getStaff()
                 ]);
                 setTasks(tasksData);
                 setProjects(projectsData);
                 setClients(clientsData);
+                setStaffList(staffData);
             } catch (error) {
                 console.error("Failed to fetch data", error);
             } finally {
@@ -832,7 +834,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                 onSave={handleCreateAllocation}
                 clients={clients}
                 projects={projects}
-                staff={MOCK_STAFF.map(s => s.name)}
+                staff={staffList.map(s => s.name)}
                 preSelectedProjectId={preSelectedProjectForTask}
             />}
             {showProjectModal && <NewProjectModal onClose={() => setShowProjectModal(false)} onSave={handleCreateProject} clients={clients} />}

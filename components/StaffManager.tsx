@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
-import { MOCK_TASKS } from '../constants';
-import { BranchName, Staff, TaskStatus } from '../types';
+import { BranchName, Staff, TaskStatus, Task } from '../types';
 import {
     Search, Plus, MapPin, Mail, Phone, MoreHorizontal, Clock,
     AtSign, Briefcase, User, ChevronRight, List, LayoutGrid,
@@ -15,16 +14,21 @@ interface StaffManagerProps {
 
 const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
     const [staffList, setStaffList] = useState<Staff[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const fetchStaff = async () => {
+    const fetchData = async () => {
         setIsLoading(true);
         try {
-            const data = await api.getStaff();
-            setStaffList(data);
+            const [staffData, tasksData] = await Promise.all([
+                api.getStaff(),
+                api.getTasks()
+            ]);
+            setStaffList(staffData);
+            setTasks(tasksData);
         } catch (error) {
             console.error('Failed to fetch staff:', error);
         } finally {
@@ -33,7 +37,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
     };
 
     useEffect(() => {
-        fetchStaff();
+        fetchData();
     }, []);
 
     const filteredStaff = staffList.filter(staff => {
@@ -44,9 +48,9 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
     });
 
     const getStaffPerformance = (staffName: string) => {
-        const tasks = MOCK_TASKS.filter(t => t.assignedTo === staffName);
-        const total = tasks.length;
-        const completed = tasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
+        const staffTasks = tasks.filter(t => t.assignedTo === staffName);
+        const total = staffTasks.length;
+        const completed = staffTasks.filter(t => t.status === TaskStatus.COMPLETED || t.status === TaskStatus.FILED).length;
         const pending = total - completed;
         const score = total === 0 ? 0 : Math.round((completed / total) * 100);
         return { total, pending, score };
@@ -71,11 +75,23 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                 mtdTrackedHours: 0
             };
             if (s.name) {
-                newStaff.push(s);
-                successCount++;
+                try {
+                    await api.createStaff({
+                        name: s.name,
+                        username: `usr_${s.id.toLowerCase()}`,
+                        role: s.role,
+                        branch: s.branch,
+                        email: s.email,
+                        password: 'password123',
+                        hourlyRate: s.hourlyRate
+                    });
+                    successCount++;
+                } catch (e) {
+                    console.error('Failed to import staff', s.name, e);
+                }
             }
         }
-        setStaffList(prev => [...prev, ...newStaff]);
+        await fetchData();
         alert(`Imported ${successCount} staff members!`);
     };
 
@@ -223,7 +239,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                 )}
                 <div className="h-12 w-full"></div>
             </div>
-            {isAddModalOpen && <AddStaffModal onClose={() => setIsAddModalOpen(false)} onAdd={() => { setIsAddModalOpen(false); fetchStaff(); }} />}
+            {isAddModalOpen && <AddStaffModal onClose={() => setIsAddModalOpen(false)} onAdd={() => { setIsAddModalOpen(false); fetchData(); }} />}
         </div>
     );
 };
