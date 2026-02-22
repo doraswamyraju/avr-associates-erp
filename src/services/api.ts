@@ -113,6 +113,16 @@ export const api = {
         return response.json();
     },
 
+    updateTask: async (task: Partial<Task> & { id: string }): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/tasks.php`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(task)
+        });
+        if (!response.ok) throw new Error('Failed to update task');
+        return response.json();
+    },
+
     createTasksBatch: async (tasks: Omit<Task, 'id'>[]): Promise<{ count: number, ids: string[] }> => {
         const response = await fetch(`${API_BASE_URL}/tasks.php`, {
             method: 'POST',

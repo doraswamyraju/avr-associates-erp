@@ -98,6 +98,54 @@ switch ($method) {
             echo json_encode(['error' => $e->getMessage()]);
         }
         break;
+
+    case 'PUT':
+        $input = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($input['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing task ID']);
+            exit;
+        }
+
+        // Build dynamic SET clause based on provided fields
+        $fields = [];
+        $params = [':id' => $input['id']];
+
+        if (isset($input['status'])) {
+            $fields[] = 'status = :status';
+            $params[':status'] = $input['status'];
+        }
+        if (isset($input['slaProgress']) || isset($input['sla_progress'])) {
+            $fields[] = 'sla_progress = :sla_progress';
+            $params[':sla_progress'] = $input['slaProgress'] ?? $input['sla_progress'];
+        }
+        if (isset($input['totalTrackedMinutes']) || isset($input['total_tracked_minutes'])) {
+            $fields[] = 'total_tracked_minutes = :total_tracked_minutes';
+            $params[':total_tracked_minutes'] = $input['totalTrackedMinutes'] ?? $input['total_tracked_minutes'];
+        }
+
+        if (empty($fields)) {
+            echo json_encode(['message' => 'No fields to update']);
+            exit;
+        }
+
+        $sql = "UPDATE tasks SET " . implode(', ', $fields) . " WHERE id = :id";
+        
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            if ($stmt->rowCount() > 0) {
+                echo json_encode(['message' => 'Task updated successfully']);
+            } else {
+                echo json_encode(['message' => 'Task not found or no changes made']);
+            }
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        break;
+
     case 'DELETE':
         if (isset($_GET['all']) && $_GET['all'] === 'true') {
             $sql = "DELETE FROM tasks";
