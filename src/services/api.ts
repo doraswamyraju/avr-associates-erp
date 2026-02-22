@@ -172,5 +172,15 @@ export const api = {
         const response = await fetch(`${API_BASE_URL}/documents.php?clientId=${clientId}`);
         if (!response.ok) throw new Error('Failed to fetch documents');
         return response.json();
+    },
+
+    createDocumentsBatch: async (documents: any[]) => {
+        const response = await fetch(`${API_BASE_URL}/documents.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(documents)
+        });
+        if (!response.ok) throw new Error('Failed to create documents batch');
+        return response.json();
     }
 };

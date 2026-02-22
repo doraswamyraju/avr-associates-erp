@@ -13,6 +13,50 @@ if (!file_exists($uploadDir)) {
 
 switch ($method) {
     case 'POST':
+        // Handle Batch Document Creation via JSON
+        if (isset($_SERVER["CONTENT_TYPE"]) && strpos($_SERVER["CONTENT_TYPE"], "application/json") !== false) {
+            $json = file_get_contents('php://input');
+            $documents = json_decode($json, true);
+
+            if (!is_array($documents) || empty($documents)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid or empty documents array']);
+                exit;
+            }
+
+            try {
+                $pdo->beginTransaction();
+                $stmt = $pdo->prepare("INSERT INTO client_documents (id, client_id, task_id, name, type, upload_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                
+                $uploadDate = date('Y-m-d');
+                $count = 0;
+                $ids = [];
+
+                foreach ($documents as $doc) {
+                    $id = uniqid('DOC');
+                    $clientId = $doc['clientId'] ?? null;
+                    $taskId = $doc['taskId'] ?? null;
+                    $name = $doc['name'] ?? 'Untitled';
+                    $type = $doc['type'] ?? 'unknown';
+                    $status = $doc['status'] ?? 'Pending';
+
+                    if (!$clientId) continue;
+
+                    $stmt->execute([$id, $clientId, $taskId, $name, $type, $uploadDate, $status]);
+                    $ids[] = $id;
+                    $count++;
+                }
+
+                $pdo->commit();
+                echo json_encode(['success' => true, 'count' => $count, 'ids' => $ids]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                http_response_code(500);
+                echo json_encode(['error' => 'Database error during batch insert']);
+            }
+            exit;
+        }
+
         // Handle File Upload
         if (!isset($_FILES['file']) || !isset($_POST['clientId'])) {
             http_response_code(400);

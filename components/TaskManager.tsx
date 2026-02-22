@@ -113,6 +113,30 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
     const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
     const [documents, setDocuments] = useState<any[]>([]);
 
+    const handleImportDocuments = async (data: any[]) => {
+        if (!project.clientId) return;
+
+        const newDocs = data.map(row => ({
+            clientId: project.clientId,
+            taskId: null,
+            name: row['Document Name'] || row['Name'] || row['name'] || 'Untitled Document',
+            type: row['Type'] || row['type'] || 'pdf',
+            status: row['Status'] || row['status'] || 'Pending'
+        }));
+
+        if (newDocs.length === 0) return;
+
+        try {
+            await api.createDocumentsBatch(newDocs);
+            const updatedDocs = await api.getDocuments(project.clientId);
+            setDocuments(updatedDocs);
+            alert(`Successfully imported ${newDocs.length} documents for requirement tracking.`);
+        } catch (e: any) {
+            console.error("Batch document import failed", e);
+            alert("Failed to import documents: " + e.message);
+        }
+    };
+
     useEffect(() => {
         if (activeTab === 'documents' && project.clientId) {
             api.getDocuments(project.clientId).then(docs => setDocuments(docs));
@@ -194,6 +218,12 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
 
                 {activeTab === 'documents' && (
                     <div className="p-8 h-full overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><FileText size={18} className="text-indigo-600" /> Engagement Documents</h3>
+                            {currentUser?.role !== UserRole.CLIENT && (
+                                <ExcelImporter onImport={handleImportDocuments} />
+                            )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {documents.map(doc => (
                                 <div key={doc.id} className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm hover:border-indigo-200 transition-all group">
@@ -382,7 +412,12 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
 
     useEffect(() => {
         if (clientName) {
-            setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase())).slice(0, 5));
+            const exactMatch = clients.find(c => c.name.toLowerCase() === clientName.toLowerCase() && c.name === clientName);
+            if (exactMatch) {
+                setFilteredClients([]);
+            } else {
+                setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase())).slice(0, 5));
+            }
         } else {
             setFilteredClients([]);
         }
@@ -400,7 +435,7 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
     const clientProjects = clientName ? projects.filter(p => {
         const c = clients.find(cl => cl.name === clientName);
         return c && p.clientId === c.id;
-    }) : [];
+    }) : projects; // Show all projects if no client selected
 
     return (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
@@ -441,19 +476,30 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                                     </div>
                                 )}
                             </div>
+                            <div className="relative z-0">
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
+                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => {
+                                    const selectedId = e.target.value;
+                                    setProjectId(selectedId);
+                                    if (selectedId) {
+                                        const matchProj = projects.find(p => p.id === selectedId);
+                                        if (matchProj) {
+                                            const matchClient = clients.find(c => c.id === matchProj.clientId);
+                                            if (matchClient) setClientName(matchClient.name);
+                                        }
+                                    }
+                                }}>
+                                    <option value="">-- Standalone Task --</option>
+                                    {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
+                                </select>
+                            </div>
                             <div>
                                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Service Type</label>
                                 <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={serviceType} onChange={e => setServiceType(e.target.value)}>
                                     {['Income Tax Filing', 'GST Compliance', 'Audit Assurance', 'Company Law', 'Consultancy'].map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
                             </div>
-                            <div>
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Project Context</label>
-                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={projectId} onChange={e => setProjectId(e.target.value)}>
-                                    <option value="">-- Standalone Task --</option>
-                                    {clientProjects.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}
-                                </select>
-                            </div>
+
                         </>
                     )}
 
@@ -497,7 +543,12 @@ const NewProjectModal: React.FC<{ onClose: () => void, onSave: (data: any) => vo
 
     useEffect(() => {
         if (clientName) {
-            setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase())).slice(0, 5));
+            const exactMatch = clients.find(c => c.name.toLowerCase() === clientName.toLowerCase() && c.name === clientName);
+            if (exactMatch) {
+                setFilteredClients([]);
+            } else {
+                setFilteredClients(clients.filter(c => c.name.toLowerCase().includes(clientName.toLowerCase())).slice(0, 5));
+            }
         } else {
             setFilteredClients([]);
         }
