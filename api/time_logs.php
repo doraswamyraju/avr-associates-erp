@@ -11,7 +11,7 @@ switch ($method) {
         
         if (!isset($data['taskId']) || !isset($data['staffId']) || !isset($data['durationMinutes'])) {
             http_response_code(400);
-            echo json_encode(['error' => 'Missing required fields']);
+            echo json_encode(['error' => 'Missing required fields', 'received' => $data]);
             exit;
         }
 
@@ -27,15 +27,15 @@ switch ($method) {
                 ':id' => $id,
                 ':task_id' => $data['taskId'],
                 ':staff_id' => $data['staffId'],
-                ':start_time' => $data['startTime'] ?? date('Y-m-d H:i:s'),
-                ':end_time' => $data['endTime'] ?? date('Y-m-d H:i:s'),
+                ':start_time' => $data['startTime'],
+                ':end_time' => $data['endTime'],
                 ':duration_minutes' => $data['durationMinutes'],
                 ':description' => $data['description'] ?? 'Work session log'
             ]);
             echo json_encode(['message' => 'Time log created', 'id' => $id]);
         } catch (PDOException $e) {
             http_response_code(500);
-            echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+            echo json_encode(['error' => 'Database error', 'details' => $e->getMessage(), 'sql' => $sql]);
         }
         break;
 
@@ -46,8 +46,6 @@ switch ($method) {
             exit;
         }
 
-        // Fetch time logs and join with users/staff table to get the full name
-        // The frontend model expects "staffName"
         $sql = "SELECT tl.*, s.name as staffName 
                 FROM time_logs tl 
                 LEFT JOIN staff s ON tl.staff_id = s.id 
@@ -59,7 +57,6 @@ switch ($method) {
         
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Format to camelCase
         $formattedLogs = array_map(function($l) {
             return [
                 'id' => $l['id'],

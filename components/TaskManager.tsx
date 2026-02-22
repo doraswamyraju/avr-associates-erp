@@ -31,8 +31,9 @@ const TaskBoard: React.FC<{
     onTaskClick: (t: Task) => void,
     activeTaskTimer: any,
     onStatusChange: (taskId: string, status: TaskStatus) => void,
-    onToggleTimer: (task: Task) => void
-}> = ({ tasks, viewMode, onTaskClick, activeTaskTimer, onStatusChange, onToggleTimer }) => {
+    onToggleTimer: (task: Task) => void,
+    userRole?: UserRole
+}> = ({ tasks, viewMode, onTaskClick, activeTaskTimer, onStatusChange, onToggleTimer, userRole }) => {
     if (viewMode === 'list') {
         return (
             <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
@@ -59,12 +60,14 @@ const TaskBoard: React.FC<{
                                         </select>
                                     </td>
                                     <td className="px-6 py-5 text-right flex items-center justify-end gap-2">
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); onToggleTimer(task); }}
-                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-2 ${isCurrentlyTracking ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-indigo-600 text-white hover:bg-slate-900'}`}
-                                        >
-                                            {isCurrentlyTracking ? <><Square size={12} className="fill-current" /> STOP</> : <><Play size={12} className="fill-current" /> START</>}
-                                        </button>
+                                        {userRole === UserRole.EMPLOYEE && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onToggleTimer(task); }}
+                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-2 ${isCurrentlyTracking ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-indigo-600 text-white hover:bg-slate-900'}`}
+                                            >
+                                                {isCurrentlyTracking ? <><Square size={12} className="fill-current" /> STOP</> : <><Play size={12} className="fill-current" /> START</>}
+                                            </button>
+                                        )}
                                         <button onClick={() => onTaskClick(task)} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"><MoreHorizontal size={14} /></button>
                                     </td>
                                 </tr>
@@ -101,12 +104,14 @@ const TaskBoard: React.FC<{
                                             >
                                                 {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
                                             </select>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onToggleTimer(task); }}
-                                                className={`w-full py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isCurrentlyTracking ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-indigo-600 text-white hover:bg-slate-900 text-white'}`}
-                                            >
-                                                {isCurrentlyTracking ? <><Square size={10} className="fill-current" /> STOP</> : <><Play size={10} className="fill-current" /> START</>}
-                                            </button>
+                                            {userRole === UserRole.EMPLOYEE && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); onToggleTimer(task); }}
+                                                    className={`w-full py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isCurrentlyTracking ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-indigo-600 text-white hover:bg-slate-900 text-white'}`}
+                                                >
+                                                    {isCurrentlyTracking ? <><Square size={10} className="fill-current" /> STOP</> : <><Play size={10} className="fill-current" /> START</>}
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <div className={`flex items-center gap-2 ${isCurrentlyTracking ? 'text-indigo-600 font-black' : 'text-slate-400 font-bold'}`}><Clock size={12} /><span className="text-[10px] uppercase tracking-tight">{Math.floor(task.totalTrackedMinutes / 60)}h {task.totalTrackedMinutes % 60}m</span></div>
@@ -272,6 +277,7 @@ const ProjectDetailView: React.FC<{
                                 activeTaskTimer={activeTaskTimer}
                                 onStatusChange={onStatusChange}
                                 onToggleTimer={onToggleTimer}
+                                userRole={currentUser?.role}
                             />
                         </div>
                     </div>
@@ -624,13 +630,25 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             const durationMs = new Date().getTime() - activeTaskTimer.startTime.getTime();
             const durationMinutes = Math.floor(durationMs / 60000) || 1;
 
+            // MySQL format YYYY-MM-DD HH:MM:SS
+            const formatDate = (date: Date) => {
+                const pad = (num: number) => num.toString().padStart(2, '0');
+                const y = date.getFullYear();
+                const mo = pad(date.getMonth() + 1);
+                const d = pad(date.getDate());
+                const h = pad(date.getHours());
+                const mi = pad(date.getMinutes());
+                const s = pad(date.getSeconds());
+                return `${y}-${mo}-${d} ${h}:${mi}:${s}`;
+            };
+
             try {
                 await api.createTimeLog({
                     taskId: task.id,
                     staffId: currentUser?.id || 'SYSTEM',
                     durationMinutes,
-                    startTime: activeTaskTimer.startTime.toISOString(),
-                    endTime: new Date().toISOString(),
+                    startTime: formatDate(activeTaskTimer.startTime),
+                    endTime: formatDate(new Date()),
                     description: 'Work Session'
                 });
 
@@ -936,6 +954,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                             activeTaskTimer={activeTaskTimer}
                             onStatusChange={handleStatusChange}
                             onToggleTimer={handleToggleTimer}
+                            userRole={currentUser?.role}
                         />
                     </div>
                 ) : (
