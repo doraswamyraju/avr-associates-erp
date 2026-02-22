@@ -7,7 +7,8 @@ import { api } from '../src/services/api';
 import {
     LayoutGrid, List, Plus, X, Play, Clock, ChevronRight, Search,
     User as UserIcon, StopCircle, IndianRupee, Layers, TrendingUp, Zap,
-    MousePointer2, Briefcase, History, AlertTriangle, Trash2, FileText, CreditCard
+    MousePointer2, Briefcase, History, AlertTriangle, Trash2, FileText, CreditCard,
+    Square, MoreHorizontal
 } from 'lucide-react';
 
 interface TaskManagerProps {
@@ -24,7 +25,14 @@ interface TaskManagerProps {
 
 
 
-const TaskBoard: React.FC<{ tasks: Task[], viewMode: 'list' | 'kanban', onTaskClick: (t: Task) => void, activeTaskTimer: any }> = ({ tasks, viewMode, onTaskClick, activeTaskTimer }) => {
+const TaskBoard: React.FC<{
+    tasks: Task[],
+    viewMode: 'list' | 'kanban',
+    onTaskClick: (t: Task) => void,
+    activeTaskTimer: any,
+    onStatusChange: (taskId: string, status: TaskStatus) => void,
+    onToggleTimer: (task: Task) => void
+}> = ({ tasks, viewMode, onTaskClick, activeTaskTimer, onStatusChange, onToggleTimer }) => {
     if (viewMode === 'list') {
         return (
             <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
@@ -36,13 +44,29 @@ const TaskBoard: React.FC<{ tasks: Task[], viewMode: 'list' | 'kanban', onTaskCl
                         {tasks.map(task => {
                             const isCurrentlyTracking = activeTaskTimer?.task.id === task.id;
                             return (
-                                <tr key={task.id} className={`hover:bg-indigo-50/30 cursor-pointer transition-colors ${isCurrentlyTracking ? 'bg-indigo-50/50' : ''}`} onClick={() => onTaskClick(task)}>
-                                    <td className="px-6 py-5"><div className="flex items-center gap-3"><div className={`w-2 h-2 rounded-full ${task.priority === Priority.HIGH ? 'bg-red-500' : 'bg-slate-300'}`}></div><div><p className="font-black text-slate-800 tracking-tight">{task.serviceType}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {task.id} • {task.period}</p></div></div></td>
-                                    <td className="px-6 py-5 font-bold text-slate-600">{task.clientName}</td>
-                                    <td className="px-6 py-5 text-center"><div className={`flex items-center justify-center gap-2 px-3 py-1 rounded-full w-fit mx-auto border ${isCurrentlyTracking ? 'bg-indigo-600 text-white border-indigo-600 animate-pulse' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>{isCurrentlyTracking ? <Zap size={12} className="fill-current" /> : <Clock size={12} />}<span className="text-xs font-black">{Math.floor(task.totalTrackedMinutes / 60)}h {task.totalTrackedMinutes % 60}m</span></div></td>
-                                    <td className="px-6 py-5 flex items-center gap-2"><div className="w-8 h-8 bg-indigo-50 text-indigo-700 rounded-lg flex items-center justify-center font-black text-xs shadow-sm">{(task.assignedTo || '?').charAt(0)}</div><span className="font-bold text-slate-600">{task.assignedTo || 'Unassigned'}</span></td>
-                                    <td className="px-6 py-5"><StatusBadge status={task.status} /></td>
-                                    <td className="px-6 py-5 text-right"><button className="px-5 py-2 bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100">Audit</button></td>
+                                <tr key={task.id} className={`hover:bg-indigo-50/30 transition-colors ${isCurrentlyTracking ? 'bg-indigo-100/50' : ''}`}>
+                                    <td className="px-6 py-5" onClick={() => onTaskClick(task)}><div className="flex items-center gap-3"><div className={`w-2 h-2 rounded-full ${task.priority === Priority.HIGH ? 'bg-red-500' : 'bg-slate-300'}`}></div><div><p className="font-black text-slate-800 tracking-tight">{task.serviceType}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {task.id} • {task.period}</p></div></div></td>
+                                    <td className="px-6 py-5 font-bold text-slate-600" onClick={() => onTaskClick(task)}>{task.clientName}</td>
+                                    <td className="px-6 py-5 text-center"><div className={`flex items-center justify-center gap-2 px-3 py-1 rounded-full w-fit mx-auto border ${isCurrentlyTracking ? 'bg-indigo-600 text-white border-indigo-600 animate-pulse shadow-lg ring-2 ring-indigo-500/20' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>{isCurrentlyTracking ? <Zap size={12} className="fill-current" /> : <Clock size={12} />}<span className="text-xs font-black">{Math.floor(task.totalTrackedMinutes / 60)}h {task.totalTrackedMinutes % 60}m</span></div></td>
+                                    <td className="px-6 py-5 flex items-center gap-2" onClick={() => onTaskClick(task)}><div className="w-8 h-8 bg-indigo-50 text-indigo-700 rounded-lg flex items-center justify-center font-black text-xs shadow-sm">{(task.assignedTo || '?').charAt(0)}</div><span className="font-bold text-slate-600">{task.assignedTo || 'Unassigned'}</span></td>
+                                    <td className="px-6 py-5">
+                                        <select
+                                            value={task.status}
+                                            onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
+                                            className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        >
+                                            {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </td>
+                                    <td className="px-6 py-5 text-right flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); onToggleTimer(task); }}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center gap-2 ${isCurrentlyTracking ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-indigo-600 text-white hover:bg-slate-900'}`}
+                                        >
+                                            {isCurrentlyTracking ? <><Square size={12} className="fill-current" /> STOP</> : <><Play size={12} className="fill-current" /> START</>}
+                                        </button>
+                                        <button onClick={() => onTaskClick(task)} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"><MoreHorizontal size={14} /></button>
+                                    </td>
                                 </tr>
                             );
                         })}
@@ -62,13 +86,32 @@ const TaskBoard: React.FC<{ tasks: Task[], viewMode: 'list' | 'kanban', onTaskCl
                         {tasks.filter(t => t.status === col).map(task => {
                             const isCurrentlyTracking = activeTaskTimer?.task.id === task.id;
                             return (
-                                <div key={task.id} onClick={() => onTaskClick(task)} className={`bg-white p-6 rounded-[2.5rem] border transition-all cursor-pointer group relative overflow-hidden ${isCurrentlyTracking ? 'ring-4 ring-indigo-500/20 border-indigo-500 shadow-2xl' : 'border-slate-200 hover:shadow-xl hover:border-indigo-300 shadow-sm'}`}>
-                                    {isCurrentlyTracking && <div className="absolute top-0 right-0 p-2 bg-indigo-600 text-white rounded-bl-2xl animate-pulse shadow-lg"><Zap size={14} className="fill-current" /></div>}
-                                    <div className="flex justify-between items-start mb-4"><p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{task.serviceType}</p><span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter ${task.priority === Priority.HIGH ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-slate-50 text-slate-400'}`}>{task.priority}</span></div>
-                                    <h4 className="font-black text-slate-800 mb-6 tracking-tight leading-tight text-lg group-hover:text-indigo-700 transition-colors">{task.clientName}</h4>
-                                    <div className="flex items-center justify-between mt-auto pt-5 border-t border-slate-50">
-                                        <div className={`flex items-center gap-2 ${isCurrentlyTracking ? 'text-indigo-600 font-black' : 'text-slate-400 font-bold'}`}><Clock size={12} /><span className="text-[10px] uppercase tracking-tight">{Math.floor(task.totalTrackedMinutes / 60)}h {task.totalTrackedMinutes % 60}m</span></div>
-                                        <div className="w-8 h-8 bg-indigo-50 text-indigo-700 border-2 border-white rounded-xl flex items-center justify-center font-black text-[10px] shadow-sm">{(task.assignedTo || '?').charAt(0)}</div>
+                                <div key={task.id} className={`bg-white p-6 rounded-[2.5rem] border transition-all cursor-pointer group relative overflow-hidden ${isCurrentlyTracking ? 'ring-4 ring-indigo-500/20 border-indigo-500 shadow-2xl' : 'border-slate-200 hover:shadow-xl hover:border-indigo-300 shadow-sm'}`}>
+                                    <div onClick={() => onTaskClick(task)}>
+                                        {isCurrentlyTracking && <div className="absolute top-0 right-0 p-2 bg-indigo-600 text-white rounded-bl-2xl animate-pulse shadow-lg"><Zap size={14} className="fill-current" /></div>}
+                                        <div className="flex justify-between items-start mb-4"><p className="text-[10px] font-black uppercase tracking-widest text-indigo-500">{task.serviceType}</p><span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter ${task.priority === Priority.HIGH ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-slate-50 text-slate-400'}`}>{task.priority}</span></div>
+                                        <h4 className="font-black text-slate-800 mb-6 tracking-tight leading-tight text-lg group-hover:text-indigo-700 transition-colors">{task.clientName}</h4>
+                                    </div>
+                                    <div className="space-y-4 pt-4 border-t border-slate-50">
+                                        <div className="flex items-center justify-between">
+                                            <select
+                                                value={task.status}
+                                                onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
+                                                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-[9px] font-black uppercase tracking-widest focus:ring-2 focus:ring-indigo-500 outline-none w-full mr-2"
+                                            >
+                                                {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onToggleTimer(task); }}
+                                                className={`w-full py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm flex items-center justify-center gap-2 ${isCurrentlyTracking ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-indigo-600 text-white hover:bg-slate-900 text-white'}`}
+                                            >
+                                                {isCurrentlyTracking ? <><Square size={10} className="fill-current" /> STOP</> : <><Play size={10} className="fill-current" /> START</>}
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div className={`flex items-center gap-2 ${isCurrentlyTracking ? 'text-indigo-600 font-black' : 'text-slate-400 font-bold'}`}><Clock size={12} /><span className="text-[10px] uppercase tracking-tight">{Math.floor(task.totalTrackedMinutes / 60)}h {task.totalTrackedMinutes % 60}m</span></div>
+                                            <div className="w-8 h-8 bg-indigo-50 text-indigo-700 border-2 border-white rounded-xl flex items-center justify-center font-black text-[10px] shadow-sm">{(task.assignedTo || '?').charAt(0)}</div>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -102,7 +145,17 @@ const ProjectCard: React.FC<{ project: Project, progress: number, onClick: () =>
     );
 };
 
-const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () => void, onTaskClick: (t: Task) => void, currentUser?: User, activeTaskTimer: any, onNewTask: () => void }> = ({ project, tasks, onBack, onTaskClick, currentUser, activeTaskTimer, onNewTask }) => {
+const ProjectDetailView: React.FC<{
+    project: Project,
+    tasks: Task[],
+    onBack: () => void,
+    onTaskClick: (t: Task) => void,
+    currentUser?: User,
+    activeTaskTimer: any,
+    onNewTask: () => void,
+    onStatusChange: (taskId: string, status: TaskStatus) => void,
+    onToggleTimer: (task: Task) => void
+}> = ({ project, tasks, onBack, onTaskClick, currentUser, activeTaskTimer, onNewTask, onStatusChange, onToggleTimer }) => {
     const totalHours = tasks.reduce((acc, t) => acc + (t.totalTrackedMinutes / 60), 0);
     const estimatedCost = totalHours * 500;
     const profitability = project.budget ? project.budget - estimatedCost : 0;
@@ -211,7 +264,16 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
                                 {currentUser?.role !== UserRole.CLIENT && <button onClick={onNewTask} className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all hover:bg-indigo-600">Assign Sub-component</button>}
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto px-6 pb-20"><TaskBoard tasks={tasks} viewMode={viewMode} onTaskClick={onTaskClick} activeTaskTimer={activeTaskTimer} /></div>
+                        <div className="flex-1 overflow-y-auto px-6 pb-20">
+                            <TaskBoard
+                                tasks={tasks}
+                                viewMode={viewMode}
+                                onTaskClick={onTaskClick}
+                                activeTaskTimer={activeTaskTimer}
+                                onStatusChange={onStatusChange}
+                                onToggleTimer={onToggleTimer}
+                            />
+                        </div>
                     </div>
                 )}
 
@@ -265,62 +327,19 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
     );
 };
 
-const PerformTaskModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t: Task) => void, activeTaskTimer: any, setActiveTaskTimer: any, currentUser?: User }> = ({ task, onClose, onUpdate, activeTaskTimer, setActiveTaskTimer, currentUser }) => {
-    const [status, setStatus] = useState(task.status);
-    const [localTimer, setLocalTimer] = useState<number>(0);
-    const isCurrentlyActive = activeTaskTimer?.task.id === task.id;
+const TaskDetailModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t: Task) => void, activeTaskTimer: any, currentUser?: User }> = ({ task, onClose, onUpdate, activeTaskTimer, currentUser }) => {
+    const [timeLogs, setTimeLogs] = useState<TimeLogEntry[]>([]);
+    const [loadingLogs, setLoadingLogs] = useState(true);
 
     useEffect(() => {
-        let interval: any;
-        if (isCurrentlyActive) {
-            interval = setInterval(() => {
-                const diff = new Date().getTime() - activeTaskTimer.startTime.getTime();
-                setLocalTimer(Math.floor(diff / 1000));
-            }, 1000);
-        } else {
-            setLocalTimer(0);
-        }
-        return () => clearInterval(interval);
-    }, [isCurrentlyActive, activeTaskTimer]);
-
-    const formatTime = (s: number) => {
-        const hrs = Math.floor(s / 3600);
-        const mins = Math.floor((s % 3600) / 60);
-        const secs = s % 60;
-        return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const handleToggleTimer = () => {
-        if (isCurrentlyActive) {
-            const extraMinutes = Math.floor(localTimer / 60);
-            const endTime = new Date();
-            const newLog: TimeLogEntry = {
-                id: 'TL' + Math.random().toString().slice(2, 8),
-                taskId: task.id,
-                staffId: currentUser?.id || 'SYSTEM',
-                staffName: currentUser?.name || 'System User',
-                startTime: activeTaskTimer.startTime.toISOString(),
-                endTime: endTime.toISOString(),
-                durationMinutes: extraMinutes,
-                description: 'Work Session Log'
-            };
-
-            const updatedLogs = [...(task.timeLogs || []), newLog];
-            onUpdate({
-                ...task,
-                totalTrackedMinutes: task.totalTrackedMinutes + extraMinutes,
-                timeLogs: updatedLogs
-            });
-            setActiveTaskTimer(null);
-        } else {
-            setActiveTaskTimer({ task, startTime: new Date() });
-        }
-    };
-
-    const handleSave = () => {
-        onUpdate({ ...task, status: status });
-        onClose();
-    };
+        api.getTimeLogs(task.id).then(logs => {
+            setTimeLogs(logs);
+            setLoadingLogs(false);
+        }).catch(e => {
+            console.error("Failed to fetch logs", e);
+            setLoadingLogs(false);
+        });
+    }, [task.id]);
 
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-end p-4 animate-in slide-in-from-right duration-500">
@@ -331,22 +350,6 @@ const PerformTaskModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
-                    <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl transition-all duration-500 ring-4 ring-slate-100">
-                        <div className="relative z-10 flex flex-col items-center">
-                            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 mb-8">Active Work Stopwatch</h4>
-                            <div className="text-6xl font-black font-mono tracking-widest mb-10 text-white drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]">{formatTime(localTimer)}</div>
-                            <div className="flex gap-4 w-full">
-                                {!isCurrentlyActive ? (
-                                    <button onClick={handleToggleTimer} className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 hover:-translate-y-1"><Play size={20} className="fill-current" /> Start Tracking</button>
-                                ) : (
-                                    <button onClick={handleToggleTimer} className="flex-1 bg-red-600 hover:bg-red-500 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 hover:-translate-y-1"><StopCircle size={20} className="fill-current" /> Stop & Log Time</button>
-                                )}
-                            </div>
-                        </div>
-                        <div className="absolute top-[-20%] right-[-10%] w-80 h-80 bg-indigo-500 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
-                        <div className="absolute bottom-[-10%] left-[-10%] w-60 h-60 bg-purple-500 rounded-full blur-[100px] opacity-10 pointer-events-none"></div>
-                    </div>
-
                     <div className="grid grid-cols-2 gap-6">
                         <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Aggregate Effort</p><p className="text-xl font-black text-slate-800">{Math.floor(task.totalTrackedMinutes / 60)}h {task.totalTrackedMinutes % 60}m</p></div>
                         <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 shadow-inner"><p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Target Entity</p><p className="text-xl font-black text-slate-800 truncate">{task.clientName}</p></div>
@@ -355,33 +358,26 @@ const PerformTaskModal: React.FC<{ task: Task, onClose: () => void, onUpdate: (t
                     <div className="space-y-6">
                         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Clocked Logs</h4>
                         <div className="space-y-3">
-                            {(task.timeLogs && task.timeLogs.length > 0) ? task.timeLogs.map((log) => (
-                                <div key={log.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                    <div className="flex items-center gap-3"><div className="p-2 bg-slate-50 rounded-xl text-slate-400 border border-slate-100"><History size={16} /></div><div><p className="text-xs font-black text-slate-800">{log.staffName}</p><p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(log.startTime).toLocaleDateString()}</p></div></div>
-                                    <span className="text-xs font-black text-indigo-600">{log.durationMinutes}m clocked</span>
-                                </div>
-                            )) : <p className="text-center text-xs text-slate-400 italic">No billable sessions recorded yet.</p>}
+                            {loadingLogs ? <p className="text-center text-xs text-slate-400">Loading sessions...</p> :
+                                timeLogs.length > 0 ? timeLogs.map((log) => (
+                                    <div key={log.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                        <div className="flex items-center gap-3"><div className="p-2 bg-slate-50 rounded-xl text-slate-400 border border-slate-100"><History size={16} /></div><div><p className="text-xs font-black text-slate-800">{log.staffName}</p><p className="text-[10px] font-bold text-slate-400 uppercase">{new Date(log.startTime).toLocaleDateString()} • {new Date(log.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p></div></div>
+                                        <span className="text-xs font-black text-indigo-600">{log.durationMinutes}m clocked</span>
+                                    </div>
+                                )) : <p className="text-center text-xs text-slate-400 italic">No billable sessions recorded yet.</p>}
                         </div>
                     </div>
 
                     <div className="space-y-6">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Workflow Progression</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            {Object.values(TaskStatus).map(s => (
-                                <button key={s} onClick={() => setStatus(s)} className={`p-5 rounded-3xl border text-[10px] font-black uppercase tracking-widest transition-all ${status === s ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-100 scale-[1.03]' : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-200'}`}>{s}</button>
-                            ))}
+                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Environment & Context</h4>
+                        <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 italic text-slate-500 text-sm leading-relaxed">
+                            This panel provides an immutable audit trail of effort logged against this task. For status changes and direct time tracking, please use the Task Board controls.
                         </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 ml-2">Executive Commit Narrative</h4>
-                        <textarea rows={4} className="w-full bg-slate-50 border border-slate-200 rounded-[2.5rem] p-8 text-sm font-medium focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all shadow-inner" placeholder="Log critical session details, bottlenecks or audit findings..."></textarea>
                     </div>
                 </div>
 
-                <div className="p-10 border-t border-slate-100 flex gap-6 shrink-0 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.02)]">
-                    <button onClick={onClose} className="flex-1 py-5 text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 hover:text-red-500 transition-colors">Discard Draft</button>
-                    <button onClick={handleSave} className="flex-2 px-12 py-5 bg-slate-900 text-white rounded-[1.75rem] text-[11px] font-black uppercase tracking-[0.4em] hover:bg-indigo-600 shadow-2xl transition-all active:scale-95">Update Lifecycle</button>
+                <div className="p-10 border-t border-slate-100 flex gap-6 shrink-0 bg-white">
+                    <button onClick={onClose} className="w-full py-5 bg-slate-900 text-white rounded-[1.75rem] text-[11px] font-black uppercase tracking-[0.4em] hover:bg-indigo-600 shadow-2xl transition-all active:scale-95">Close Manifest</button>
                 </div>
             </div>
         </div>
@@ -610,6 +606,53 @@ const TaskManager: React.FC<TaskManagerProps> = ({
     const [clients, setClients] = useState<Client[]>([]);
     const [staffList, setStaffList] = useState<Staff[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+        try {
+            await api.updateTask({ id: taskId, status: newStatus });
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+        } catch (e) {
+            console.error("Failed to update status", e);
+            alert("Failed to update status");
+        }
+    };
+
+    const handleToggleTimer = async (task: Task) => {
+        const isCurrentlyTracking = activeTaskTimer?.task.id === task.id;
+
+        if (isCurrentlyTracking) {
+            const durationMs = new Date().getTime() - activeTaskTimer.startTime.getTime();
+            const durationMinutes = Math.floor(durationMs / 60000) || 1;
+
+            try {
+                await api.createTimeLog({
+                    taskId: task.id,
+                    staffId: currentUser?.id || 'SYSTEM',
+                    durationMinutes,
+                    startTime: activeTaskTimer.startTime.toISOString(),
+                    endTime: new Date().toISOString(),
+                    description: 'Work Session'
+                });
+
+                const newTotal = (task.totalTrackedMinutes || 0) + durationMinutes;
+                await api.updateTask({ id: task.id, totalTrackedMinutes: newTotal });
+
+                setTasks(prev => prev.map(t => t.id === task.id ? { ...t, totalTrackedMinutes: newTotal } : t));
+                if (setActiveTaskTimer) setActiveTaskTimer(null);
+
+                alert(`Work session recorded: ${durationMinutes} minutes.`);
+            } catch (e) {
+                console.error("Failed to save time log", e);
+                alert("Error saving time log to database.");
+            }
+        } else {
+            if (activeTaskTimer) {
+                alert("Please stop your current active timer before starting a new one.");
+                return;
+            }
+            if (setActiveTaskTimer) setActiveTaskTimer({ task, startTime: new Date() });
+        }
+    };
     const [assigneeFilter, setAssigneeFilter] = useState<string | null>(preSelectedAssignee || null);
     const [statusFilter, setStatusFilter] = useState<TaskStatus | 'All'>('All');
     const [textSearch, setTextSearch] = useState('');
@@ -821,6 +864,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                     setPreSelectedProjectForTask(selectedProject.id);
                     setShowAllocationModal(true);
                 }}
+                onStatusChange={handleStatusChange}
+                onToggleTimer={handleToggleTimer}
             />
         );
     }
@@ -884,7 +929,14 @@ const TaskManager: React.FC<TaskManagerProps> = ({
             <div className="flex-1 overflow-hidden relative">
                 {activeTab === 'tasks' ? (
                     <div className="h-full overflow-y-auto p-6 min-h-0 relative">
-                        <TaskBoard tasks={filteredTasks} viewMode={viewMode} onTaskClick={setSelectedTask} activeTaskTimer={activeTaskTimer} />
+                        <TaskBoard
+                            tasks={filteredTasks}
+                            viewMode={viewMode}
+                            onTaskClick={setSelectedTask}
+                            activeTaskTimer={activeTaskTimer}
+                            onStatusChange={handleStatusChange}
+                            onToggleTimer={handleToggleTimer}
+                        />
                     </div>
                 ) : (
                     <div className="h-full overflow-y-auto p-6 min-h-0 relative">
@@ -899,12 +951,11 @@ const TaskManager: React.FC<TaskManagerProps> = ({
 
             {
                 selectedTask && (
-                    <PerformTaskModal
+                    <TaskDetailModal
                         task={selectedTask}
                         onClose={() => setSelectedTask(null)}
                         onUpdate={(updated) => setTasks(tasks.map(t => t.id === updated.id ? updated : t))}
                         activeTaskTimer={activeTaskTimer}
-                        setActiveTaskTimer={setActiveTaskTimer}
                         currentUser={currentUser}
                     />
                 )

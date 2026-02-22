@@ -192,5 +192,22 @@ export const api = {
         });
         if (!response.ok) throw new Error('Failed to create documents batch');
         return response.json();
+    },
+
+    // Time Logs
+    createTimeLog: async (log: any): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/time_logs.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(log)
+        });
+        if (!response.ok) throw new Error('Failed to create time log');
+        return response.json();
+    },
+
+    getTimeLogs: async (taskId: string): Promise<any[]> => {
+        const response = await fetch(`${API_BASE_URL}/time_logs.php?taskId=${taskId}`);
+        if (!response.ok) throw new Error('Failed to fetch time logs');
+        return response.json();
     }
 };
