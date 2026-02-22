@@ -220,7 +220,7 @@ const ProjectDetailView: React.FC<{ project: Project, tasks: Task[], onBack: () 
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-800 flex items-center gap-3"><FileText size={18} className="text-indigo-600" /> Engagement Documents</h3>
                             {currentUser?.role !== UserRole.CLIENT && (
-                                <ExcelImporter onImport={handleImportDocuments} />
+                                <ExcelImporter templateName="Documents" requiredColumns={['Document Name']} onImport={handleImportDocuments} />
                             )}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -493,10 +493,8 @@ const NewAllocationModal: React.FC<{ onClose: () => void, onSave: (data: any) =>
                                 </select>
                             </div>
                             <div>
-                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Service Type</label>
-                                <select className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" value={serviceType} onChange={e => setServiceType(e.target.value)}>
-                                    {['Income Tax Filing', 'GST Compliance', 'Audit Assurance', 'Company Law', 'Consultancy'].map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Task / Service Name</label>
+                                <input className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Q3 GST Audit" value={serviceType} onChange={e => setServiceType(e.target.value)} />
                             </div>
 
                         </>
@@ -858,6 +856,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({
                             <button onClick={handleDeleteAllProjects} className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-100 border border-red-100 flex items-center gap-2"><Trash2 size={16} /> Purge Projects</button>
                         )}
                         <ExcelImporter
+                            templateName="Tasks"
+                            requiredColumns={['Client Name', 'Service']}
                             onImport={handleImportTasks}
                         />
 
