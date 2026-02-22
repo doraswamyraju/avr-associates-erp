@@ -22,8 +22,27 @@ switch ($method) {
             $stmt->execute();
         }
         
-        $projects = $stmt->fetchAll();
-        echo json_encode($projects);
+        $projects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $formattedProjects = array_map(function($p) {
+            return [
+                'id' => $p['id'],
+                'name' => $p['name'],
+                'description' => $p['description'],
+                'clientId' => $p['client_id'],
+                'clientName' => $p['clientName'],
+                'status' => $p['status'],
+                'startDate' => $p['start_date'],
+                'dueDate' => $p['due_date'],
+                'manager' => $p['manager'],
+                'branch' => $p['branch'],
+                'priority' => $p['priority'],
+                'budget' => (float)$p['budget'],
+                'totalHoursTracked' => (float)$p['total_hours_tracked']
+            ];
+        }, $projects);
+
+        echo json_encode($formattedProjects);
         break;
 
     case 'POST':

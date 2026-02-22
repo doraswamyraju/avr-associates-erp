@@ -101,7 +101,20 @@ switch ($method) {
         $stmt = $pdo->prepare("SELECT * FROM client_documents WHERE client_id = ? ORDER BY upload_date DESC");
         $stmt->execute([$clientId]);
         $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($documents);
+        
+        $formattedDocs = array_map(function($d) {
+            return [
+                'id' => $d['id'],
+                'clientId' => $d['client_id'],
+                'taskId' => $d['task_id'],
+                'name' => $d['name'],
+                'type' => $d['type'],
+                'uploadDate' => $d['upload_date'],
+                'status' => $d['status']
+            ];
+        }, $documents);
+
+        echo json_encode($formattedDocs);
         break;
 
     default:

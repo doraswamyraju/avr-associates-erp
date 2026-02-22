@@ -10,14 +10,21 @@ switch ($method) {
                 LEFT JOIN clients c ON i.client_id = c.id";
         
         $stmt = $pdo->query($sql);
-        $invoices = $stmt->fetchAll();
+        $invoices = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        // Parse items JSON
-        foreach ($invoices as &$invoice) {
-            $invoice['items'] = json_decode($invoice['items']);
-        }
+        $formattedInvoices = array_map(function($i) {
+            return [
+                'id' => $i['id'],
+                'clientId' => $i['client_id'],
+                'clientName' => $i['clientName'],
+                'date' => $i['date'],
+                'amount' => (float)$i['amount'],
+                'status' => $i['status'],
+                'items' => json_decode($i['items'])
+            ];
+        }, $invoices);
         
-        echo json_encode($invoices);
+        echo json_encode($formattedInvoices);
         break;
 
     case 'POST':

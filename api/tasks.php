@@ -19,8 +19,27 @@ switch ($method) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         
-        $tasks = $stmt->fetchAll();
-        echo json_encode($tasks);
+        $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $formattedTasks = array_map(function($t) {
+            return [
+                'id' => $t['id'],
+                'clientId' => $t['client_id'],
+                'clientName' => $t['clientName'],
+                'projectId' => $t['project_id'],
+                'serviceType' => $t['service_type'],
+                'period' => $t['period'],
+                'dueDate' => $t['due_date'],
+                'status' => $t['status'],
+                'assignedTo' => $t['assigned_to'],
+                'priority' => $t['priority'],
+                'branch' => $t['branch'],
+                'slaProgress' => (int)$t['sla_progress'],
+                'totalTrackedMinutes' => (int)$t['total_tracked_minutes']
+            ];
+        }, $tasks);
+
+        echo json_encode($formattedTasks);
         break;
 
     case 'POST':
