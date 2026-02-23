@@ -61,6 +61,7 @@ switch ($method) {
         break;
 
     case 'POST':
+        require_once 'mail_utils.php';
         $data = json_decode(file_get_contents('php://input'), true);
         
         $sql = "INSERT INTO clients (id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by, service_details) 
@@ -74,6 +75,7 @@ switch ($method) {
         }
 
         try {
+            $pdo->beginTransaction();
             $stmt->execute([
                 ':id' => $data['id'],
                 ':name' => $data['name'],
@@ -98,8 +100,42 @@ switch ($method) {
                 ':refer_by' => $data['referBy'] ?? null,
                 ':service_details' => isset($data['serviceDetails']) ? json_encode($data['serviceDetails']) : null
             ]);
-            echo json_encode(['message' => 'Client created', 'id' => $data['id']]);
+
+            // Create system user for the client
+            $email = $data['email'] ?? null;
+            if ($email) {
+                $resetToken = bin2hex(random_bytes(32));
+                $tokenExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                
+                // Username can be email or generated from name
+                $username = strtolower(str_replace(' ', '.', $data['name'])) . mt_rand(10, 99);
+                $tempPassword = bin2hex(random_bytes(8));
+                $passwordHash = password_hash($tempPassword, PASSWORD_DEFAULT);
+
+                $sqlUser = "INSERT INTO users (id, username, password_hash, name, role, avatar, branch, client_id, email, reset_token, token_expiry) 
+                            VALUES (:id, :username, :password_hash, :name, 'Client', :avatar, :branch, :client_id, :email, :reset_token, :token_expiry)";
+                
+                $stmtUser = $pdo->prepare($sqlUser);
+                $stmtUser->execute([
+                    ':id' => 'U-' . $data['id'], // Prefix client ID for user table uniqueness
+                    ':username' => $username,
+                    ':password_hash' => $passwordHash,
+                    ':name' => $data['name'],
+                    ':avatar' => null,
+                    ':branch' => $data['branch'] ?? 'Ravulapalem',
+                    ':client_id' => $data['id'],
+                    ':email' => $email,
+                    ':reset_token' => $resetToken,
+                    ':token_expiry' => $tokenExpiry
+                ]);
+
+                send_welcome_email($email, $data['name'], $username, $resetToken);
+            }
+
+            $pdo->commit();
+            echo json_encode(['message' => 'Client created and user account initialized', 'id' => $data['id']]);
         } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
             http_response_code(500);
             echo json_encode(['error' => $e->getMessage()]);
         }

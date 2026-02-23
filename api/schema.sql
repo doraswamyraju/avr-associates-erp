@@ -9,12 +9,15 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(100) UNIQUE,
     password_hash VARCHAR(255),
     name VARCHAR(100) NOT NULL,
+    email VARCHAR(100),
     role ENUM('Admin', 'Employee', 'Client') NOT NULL,
     avatar VARCHAR(255),
     client_id VARCHAR(50),
     branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
     is_clocked_in BOOLEAN DEFAULT FALSE,
-    clock_in_time DATETIME
+    clock_in_time DATETIME,
+    reset_token VARCHAR(100) NULL,
+    token_expiry DATETIME NULL
 );
 
 -- Clients Table

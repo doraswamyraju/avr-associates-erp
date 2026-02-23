@@ -8,14 +8,50 @@ export const api = {
     // Auth
     auth: {
         login: async (credentials: any): Promise<any> => {
-            const response = await fetch(`${API_BASE_URL}/auth.php`, {
+            const response = await fetch(`${API_BASE_URL}/auth.php?action=login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(credentials) // username and password
+                body: JSON.stringify(credentials)
             });
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Login failed');
+            }
+            return response.json();
+        },
+        forgotPassword: async (email: string): Promise<any> => {
+            const response = await fetch(`${API_BASE_URL}/auth.php?action=forgot_password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Request failed');
+            }
+            return response.json();
+        },
+        resetPassword: async (data: any): Promise<any> => {
+            const response = await fetch(`${API_BASE_URL}/auth.php?action=reset_password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Reset failed');
+            }
+            return response.json();
+        },
+        verifyResetToken: async (token: string): Promise<any> => {
+            const response = await fetch(`${API_BASE_URL}/auth.php?action=verify_token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Invalid token');
             }
             return response.json();
         }

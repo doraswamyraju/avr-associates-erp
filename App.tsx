@@ -11,6 +11,7 @@ import ReportsAnalytics from './components/ReportsAnalytics';
 import ServiceCatalogue from './components/ServiceCatalogue';
 import StaffManager from './components/StaffManager';
 import LoginPage from './components/LoginPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import { BranchName, User, UserRole, Task } from './types';
 import { MOCK_CLIENTS } from './constants';
 import { Hammer, Plus, UserPlus, FileText, Briefcase, CreditCard, UserCog } from 'lucide-react';
@@ -20,6 +21,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedBranch, setSelectedBranch] = useState<BranchName>(BranchName.ALL);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
 
   // Task-wise Timer Global State
   const [activeTaskTimer, setActiveTaskTimer] = useState<{ task: Task, startTime: Date } | null>(null);
@@ -30,6 +32,23 @@ const App: React.FC = () => {
   // Quick Action State
   const [quickAction, setQuickAction] = useState<string | null>(null);
   const [isFabOpen, setIsFabOpen] = useState(false);
+
+  useEffect(() => {
+    // Check for reset token in URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setResetToken(token);
+    }
+  }, []);
+
+  const clearResetFlow = () => {
+    setResetToken(null);
+    // Remove token from URL without refreshing
+    const url = new URL(window.location.href);
+    url.searchParams.delete('token');
+    window.history.replaceState({}, '', url.toString());
+  };
 
   // Clock In State
   const handleClockIn = () => {
@@ -64,6 +83,10 @@ const App: React.FC = () => {
     }
     setActiveTab(tab);
   };
+
+  if (resetToken) {
+    return <ResetPasswordPage token={resetToken} onComplete={clearResetFlow} />;
+  }
 
   if (!user) {
     return <LoginPage onLogin={setUser} />;
