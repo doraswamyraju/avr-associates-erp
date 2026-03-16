@@ -27,6 +27,8 @@ if ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.
     
     if (file_exists(__DIR__ . '/../db_production_config.php')) {
         include __DIR__ . '/../db_production_config.php';
+    } elseif (file_exists(__DIR__ . '/../../db_production_config.php')) {
+        include __DIR__ . '/../../db_production_config.php';
     } else {
         // Fallback / Placeholder - CHANGE THESE ON SERVER or use the config file approach
         $db   = 'u123456789_avr_erp'; 
