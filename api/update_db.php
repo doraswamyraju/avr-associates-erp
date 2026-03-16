@@ -27,6 +27,33 @@ try {
         echo "Columns 'username', 'password_hash' already exist in 'users'.<br>";
     }
 
+    // Add Incoming Register Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_register (
+        id VARCHAR(50) PRIMARY KEY,
+        date DATE NOT NULL,
+        sender_name VARCHAR(150) NOT NULL,
+        mode ENUM('Courier', 'Hand', 'Post', 'Email') NOT NULL,
+        subject TEXT,
+        received_by VARCHAR(100),
+        branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+        status ENUM('Pending', 'Processed', 'Filed') DEFAULT 'Pending'
+    )");
+    echo "Table 'incoming_register' checked/created.<br>";
+
+    // Add Visitor Register Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS visitor_register (
+        id VARCHAR(50) PRIMARY KEY,
+        date DATE NOT NULL,
+        visitor_name VARCHAR(150) NOT NULL,
+        purpose TEXT,
+        contact_no VARCHAR(20),
+        entry_time DATETIME,
+        exit_time DATETIME,
+        branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+        status ENUM('In', 'Out') DEFAULT 'In'
+    )");
+    echo "Table 'visitor_register' checked/created.<br>";
+
 } catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
 }

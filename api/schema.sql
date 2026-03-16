@@ -161,3 +161,28 @@ CREATE TABLE IF NOT EXISTS client_documents (
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
 );
+
+-- Incoming Register Table
+CREATE TABLE IF NOT EXISTS incoming_register (
+    id VARCHAR(50) PRIMARY KEY,
+    date DATE NOT NULL,
+    sender_name VARCHAR(150) NOT NULL,
+    mode ENUM('Courier', 'Hand', 'Post', 'Email') NOT NULL,
+    subject TEXT,
+    received_by VARCHAR(100),
+    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    status ENUM('Pending', 'Processed', 'Filed') DEFAULT 'Pending'
+);
+
+-- Visitor Register Table
+CREATE TABLE IF NOT EXISTS visitor_register (
+    id VARCHAR(50) PRIMARY KEY,
+    date DATE NOT NULL,
+    visitor_name VARCHAR(150) NOT NULL,
+    purpose TEXT,
+    contact_no VARCHAR(20),
+    entry_time DATETIME,
+    exit_time DATETIME,
+    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    status ENUM('In', 'Out') DEFAULT 'In'
+);
