@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { BranchName, TaskStatus, UserRole, Task, Client, Invoice, Staff, User } from '../types';
+import { BranchName, TaskStatus, UserRole, Task, Client, Invoice, Staff, User, IncomingRegisterEntry, VisitorRegisterEntry } from '../types';
 import { api } from '../src/services/api';
-import { Users, AlertCircle, CheckCircle2, IndianRupee, Clock, TrendingUp } from 'lucide-react';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-    PieChart, Pie, Cell, LineChart, Line
-} from 'recharts';
+    Users, AlertCircle, CheckCircle2, IndianRupee, Clock, TrendingUp,
+    Plus, FileText, Briefcase, Landmark, Shield, List, Bell,
+    ArrowRight, PencilLine, UserPlus, ClipboardList, Package,
+    FileCheck, Activity, Layers, Coffee, HardHat, FileBarChart,
+    Search, UserMinus, Trash2
+} from 'lucide-react';
 
 interface DashboardProps {
     selectedBranch: BranchName;
@@ -19,21 +21,30 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     const [clients, setClients] = useState<Client[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [staffList, setStaffList] = useState<Staff[]>([]);
+    const [incomingRegister, setIncomingRegister] = useState<IncomingRegisterEntry[]>([]);
+    const [visitorRegister, setVisitorRegister] = useState<VisitorRegisterEntry[]>([]);
+    const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadDashboardData = async () => {
             try {
-                const [tasksData, clientsData, invoicesData, staffData] = await Promise.all([
+                const [tasksData, clientsData, invoicesData, staffData, incomingData, visitorData, projectsData] = await Promise.all([
                     api.getTasks(),
                     api.getClients(),
                     api.getInvoices(),
-                    api.getStaff()
+                    api.getStaff(),
+                    api.getIncomingRegister(),
+                    api.getVisitorRegister(),
+                    api.getProjects()
                 ]);
                 setTasks(tasksData);
                 setClients(clientsData);
                 setInvoices(invoicesData);
                 setStaffList(staffData);
+                setIncomingRegister(incomingData);
+                setVisitorRegister(visitorData);
+                setProjects(projectsData);
             } catch (error) {
                 console.error("Failed to load dashboard data", error);
             } finally {
@@ -46,293 +57,259 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     // Filter Data based on Branch
     const branchFilteredTasks = tasks.filter(t => selectedBranch === BranchName.ALL || t.branch === selectedBranch);
     const branchFilteredClients = clients.filter(c => selectedBranch === BranchName.ALL || c.branch === selectedBranch);
-    const branchFilteredInvoices = invoices.filter(i => {
-        const client = clients.find(c => c.id === i.clientId);
-        return selectedBranch === BranchName.ALL || client?.branch === selectedBranch;
-    });
+    const branchFilteredIncoming = incomingRegister.filter(i => selectedBranch === BranchName.ALL || i.branch === selectedBranch);
+    const branchFilteredVisitors = visitorRegister.filter(v => selectedBranch === BranchName.ALL || v.branch === selectedBranch);
+    const branchFilteredStaff = staffList.filter(s => selectedBranch === BranchName.ALL || s.branch === selectedBranch);
+    const branchFilteredProjects = projects.filter(p => selectedBranch === BranchName.ALL || p.branch === selectedBranch);
 
-    // Role-based filtering
-    const displayTasks = userRole === UserRole.ADMIN
-        ? branchFilteredTasks
-        : branchFilteredTasks.filter(t => t.assignedTo === currentUser.name);
+    const services = [
+        { id: 'gst', name: 'GST', icon: Landmark, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { id: 'tds', name: 'TDS', icon: FileCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { id: 'it', name: 'Income tax', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-50' },
+        { id: 'food', name: 'Food licence', icon: Coffee, color: 'text-amber-600', bg: 'bg-amber-50' },
+        { id: 'msme', name: 'MSME', icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
+        { id: 'labour', name: 'Labour', icon: HardHat, color: 'text-rose-600', bg: 'bg-rose-50' },
+        { id: 'project', name: 'Project Report', icon: TrendingUp, color: 'text-sky-600', bg: 'bg-sky-50' },
+        { id: 'projections', name: 'Projections', icon: FileBarChart, color: 'text-teal-600', bg: 'bg-teal-50' },
+        { id: 'pf-esi', name: 'PF AND ESI', icon: Shield, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { id: 'tax-audit', name: 'TAX AUDIT', icon: PencilLine, color: 'text-slate-600', bg: 'bg-slate-50' },
+        { id: 'other', name: 'Other Services', icon: Layers, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { id: 'catalogue', name: 'Show All Services', icon: List, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+        { id: 'deleted', name: 'Deleted Users', icon: Trash2, color: 'text-slate-400', bg: 'bg-slate-50' },
+    ];
 
-    // Metrics
-    const totalClients = branchFilteredClients.length;
-    const pendingTasks = displayTasks.filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.FILED).length;
-    const overdueTasks = displayTasks.filter(t => t.status === TaskStatus.OVERDUE).length;
+    const TrackerCard = ({ title, count, icon: Icon, actionLabel, onClickAction, variant = 'blue' }: any) => {
+        const bgColors: any = {
+            blue: 'bg-[#67B7D1] hover:bg-[#5AA8C0]',
+            indigo: 'bg-indigo-600 hover:bg-indigo-700',
+            slate: 'bg-slate-800 hover:bg-slate-900',
+            rose: 'bg-rose-500 hover:bg-rose-600',
+            emerald: 'bg-emerald-600 hover:bg-emerald-700'
+        };
 
-    // Admin Specific Metrics
-    const paidInvoices = branchFilteredInvoices.filter(i => i.status === 'Paid');
-    const totalRevenue = paidInvoices.reduce((sum, i) => sum + i.amount, 0);
-    const totalBilled = branchFilteredInvoices.reduce((sum, i) => sum + i.amount, 0);
-    const collectionRate = totalBilled > 0 ? Math.round((totalRevenue / totalBilled) * 100) : 0;
-
-    // Compliance Outlook (Next 30 days)
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    const upcomingDeadlines = branchFilteredTasks.filter(t => {
-        const dueDate = new Date(t.dueDate);
-        return dueDate >= new Date() && dueDate <= thirtyDaysFromNow;
-    }).length;
-
-    // Chart Data: Status Distribution
-    const statusCounts = displayTasks.reduce((acc, task) => {
-        acc[task.status] = (acc[task.status] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    const pieData = Object.keys(statusCounts).map(status => ({
-        name: status,
-        value: statusCounts[status]
-    }));
-
-    // Chart Data: Employee Workload (Admin only)
-    const staffWorkload = staffList
-        .filter(s => selectedBranch === BranchName.ALL || s.branch === selectedBranch)
-        .map(staff => {
-            const count = branchFilteredTasks.filter(t =>
-                t.assignedTo === staff.name &&
-                t.status !== TaskStatus.COMPLETED &&
-                t.status !== TaskStatus.FILED
-            ).length;
-            return {
-                name: staff.name,
-                pendingTasks: count
-            };
-        })
-        .filter(item => item.pendingTasks > 0)
-        .sort((a, b) => b.pendingTasks - a.pendingTasks);
-
-    const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-    const StatCard = ({ title, value, icon: Icon, color, subtext, trend }: any) => (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-start justify-between hover:shadow-xl transition-all duration-300 group">
-            <div className="space-y-2">
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{title}</p>
-                <div className="flex items-baseline gap-2">
-                    <h3 className="text-3xl font-black text-slate-800 tracking-tight">{value}</h3>
-                    {trend && (
-                        <span className={`text-[10px] font-bold ${trend === 'up' ? 'text-emerald-500' : 'text-slate-400'}`}>
-                            {trend === 'up' ? '▲' : '▼'}
-                        </span>
-                    )}
+        return (
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
+                <div className="p-10 flex-1 relative">
+                    <div className="absolute top-8 right-8 text-slate-100 transition-colors group-hover:text-indigo-100">
+                        <Icon size={64} strokeWidth={1.5} />
+                    </div>
+                    <div className="relative z-10 space-y-2">
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">{title}</h3>
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-5xl font-black text-slate-900">{count}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Records Found</span>
+                        </div>
+                    </div>
                 </div>
-                {subtext && <p className="text-xs font-medium text-slate-400">{subtext}</p>}
+                <button 
+                    onClick={onClickAction}
+                    className={`w-full py-4 text-white font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-colors border-t border-black/5 ${bgColors[variant] || bgColors.blue}`}
+                >
+                    {actionLabel} <ArrowRight size={14} />
+                </button>
             </div>
-            <div className={`p-4 rounded-2xl ${color} shadow-lg shadow-current/10 group-hover:scale-110 transition-transform`}>
-                <Icon size={24} className="text-white" />
+        );
+    };
+
+    const ServiceTab = ({ id, name, icon: Icon, color, bg }: any) => (
+        <div 
+            onClick={() => onNavigate?.(id === 'catalogue' ? 'services' : id === 'deleted' ? 'clients' : 'services')}
+            className="bg-white rounded-[1.5rem] border border-slate-100 p-8 flex flex-col items-start gap-4 hover:shadow-xl transition-all duration-300 cursor-pointer group relative overflow-hidden"
+        >
+            <div className="absolute top-4 right-4 text-slate-100 group-hover:text-indigo-100/50 transition-colors">
+                <Icon size={48} />
             </div>
+            <h4 className="text-xl font-black text-slate-800 tracking-tight group-hover:text-indigo-600 transition-colors relative z-10">{name}</h4>
         </div>
     );
 
-    const handleStaffBarClick = (data: any) => {
-        if (onNavigate && data && data.activePayload && data.activePayload.length > 0) {
-            const employeeName = data.activePayload[0].payload.name;
-            onNavigate('tasks', { assignee: employeeName });
-        }
-    };
-
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar relative bg-slate-50/50">
+        <div className="h-full overflow-y-auto custom-scrollbar bg-slate-50/30">
             {loading && <div className="absolute inset-0 bg-white/50 z-50 flex items-center justify-center"><div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>}
 
-            <div className="p-8 space-y-8 pb-32">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="p-10 space-y-12 pb-32 max-w-[1600px] mx-auto">
+                
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
                     <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">
-                                {userRole === UserRole.ADMIN ? 'Executive Hub' : 'My Workspace'}
-                            </h2>
-                            {userRole === UserRole.EMPLOYEE && (
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 ${currentUser.isClockedIn ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'bg-slate-200 text-slate-500'}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${currentUser.isClockedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                                    {currentUser.isClockedIn ? 'On Duty' : 'Offline'}
-                                </span>
-                            )}
-                        </div>
-                        <p className="text-slate-500 text-sm font-medium">Monitoring {selectedBranch} performance & operations.</p>
+                        <h2 className="text-4xl font-black text-slate-800 tracking-tighter mb-2">
+                            {userRole === UserRole.ADMIN ? 'Hub Central' : 'My Dashboard'}
+                        </h2>
+                        <p className="text-slate-500 font-bold flex items-center gap-2">
+                            <Activity size={16} className="text-indigo-500" />
+                            Monitoring <span className="text-indigo-600 px-2 py-0.5 bg-indigo-50 rounded-lg">{selectedBranch}</span> ecosystem.
+                        </p>
                     </div>
-                    <div className="flex gap-3">
+                    
+                    <div className="flex items-center gap-4">
+                         <div className="relative group">
+                            <button className="p-4 bg-white border border-slate-200 text-slate-500 rounded-2xl hover:bg-slate-50 shadow-sm transition-all relative">
+                                <Bell size={24} />
+                                <span className="absolute top-3 right-3 w-3 h-3 bg-rose-500 rounded-full border-2 border-white"></span>
+                            </button>
+                         </div>
                         {userRole === UserRole.ADMIN && (
-                            <button className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 shadow-sm transition-all active:scale-95">
-                                Analytics Export
+                            <button 
+                                onClick={() => alert("Branch Management - Under Construction")}
+                                className="px-8 py-4 bg-white border-2 border-slate-200 text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-50 shadow-lg transition-all active:scale-95 flex items-center gap-3"
+                            >
+                                <Plus size={18} /> New Branch
                             </button>
                         )}
-                        <button
-                            onClick={() => onNavigate && onNavigate('tasks', { quickAction: 'NEW_TASK' })}
-                            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 shadow-xl shadow-slate-200 transition-all active:scale-95 flex items-center gap-2"
+                        <button 
+                            onClick={() => onNavigate?.('tasks', { quickAction: 'NEW_TASK' })}
+                            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-indigo-600 shadow-2xl transition-all active:scale-95 flex items-center gap-3"
                         >
-                            <TrendingUp size={16} /> New Engagement
+                            <TrendingUp size={18} /> New Engagement
                         </button>
                     </div>
                 </div>
 
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <StatCard
-                        title={userRole === UserRole.ADMIN ? "Network Clients" : "Active Assigns"}
-                        value={userRole === UserRole.ADMIN ? totalClients : pendingTasks}
-                        icon={Users}
-                        color="bg-indigo-600"
-                        subtext={userRole === UserRole.ADMIN ? "+4.2% growth" : "Primary workload focus"}
-                        trend="up"
-                    />
-                    <StatCard
-                        title={userRole === UserRole.ADMIN ? "Revenue Collection" : "Efficiency Score"}
-                        value={userRole === UserRole.ADMIN ? `${collectionRate}%` : "94%"}
-                        icon={IndianRupee}
-                        color="bg-emerald-500"
-                        subtext={userRole === UserRole.ADMIN ? "Billed vs Realized" : "+2% vs last month"}
-                        trend="up"
-                    />
-                    <StatCard
-                        title="Urgent Actions"
-                        value={overdueTasks}
-                        icon={AlertCircle}
-                        color="bg-rose-500"
-                        subtext="Requires immediate focus"
-                    />
-                    <StatCard
-                        title={userRole === UserRole.ADMIN ? "30D Compliance" : "Work Hours (MTD)"}
-                        value={userRole === UserRole.ADMIN ? upcomingDeadlines : `${staffList.find(s => s.name === currentUser.name)?.mtdTrackedHours || 0}h`}
-                        icon={Clock}
-                        color="bg-amber-500"
-                        subtext={userRole === UserRole.ADMIN ? "Upcoming critical filings" : "Tracked effort logs"}
-                    />
+                {/* Operations & Reports Section */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4 px-2">
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <h3 className="text-2xl font-black text-indigo-900 tracking-tight uppercase">Operational Intelligence</h3>
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <TrackerCard 
+                            title="Clients" 
+                            count={branchFilteredClients.length} 
+                            icon={Users} 
+                            actionLabel="Add Client"
+                            variant="blue"
+                            onClickAction={() => onNavigate?.('clients', { quickAction: 'NEW_CLIENT' })}
+                        />
+                        <TrackerCard 
+                            title="Employees" 
+                            count={branchFilteredStaff.length} 
+                            icon={UserPlus} 
+                            actionLabel="Register Staff"
+                            variant="indigo"
+                            onClickAction={() => onNavigate?.('staff', { quickAction: 'NEW_EMPLOYEE' })}
+                        />
+                         <TrackerCard 
+                            title="Active Projects" 
+                            count={branchFilteredProjects.length} 
+                            icon={Briefcase} 
+                            actionLabel="All Projects"
+                            variant="emerald"
+                            onClickAction={() => onNavigate?.('tasks')}
+                        />
+                        <TrackerCard 
+                            title="Audit Reports" 
+                            count={24} 
+                            icon={FileBarChart} 
+                            actionLabel="View Analytics"
+                            variant="slate"
+                            onClickAction={() => onNavigate?.('reports')}
+                        />
+                    </div>
                 </div>
 
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Incoming Data Section */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4 px-2">
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <h3 className="text-2xl font-black text-indigo-900 tracking-tight uppercase">Incoming Data</h3>
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <TrackerCard 
+                            title="Incoming Register" 
+                            count={branchFilteredIncoming.length} 
+                            icon={PencilLine} 
+                            actionLabel="Add Incoming"
+                            variant="blue"
+                            onClickAction={() => onNavigate?.('reports')}
+                        />
+                        <TrackerCard 
+                            title="Visitor Register" 
+                            count={branchFilteredVisitors.length} 
+                            icon={UserPlus} 
+                            actionLabel="Add Visitor"
+                            variant="blue"
+                            onClickAction={() => onNavigate?.('reports')}
+                        />
+                    </div>
+                </div>
 
-                    {/* Left Chart: Distribution or Personal Efficiency */}
-                    <div className="lg:col-span-1 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col">
-                        <div className="mb-8">
-                            <h3 className="text-lg font-black text-slate-800 tracking-tight">Status Distribution</h3>
-                            <p className="text-xs font-medium text-slate-400">Total operational breakdown</p>
+                {/* Services Information Section */}
+                <div className="space-y-8">
+                    <div className="flex items-center gap-4 px-2">
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                        <h3 className="text-2xl font-black text-indigo-900 tracking-tight uppercase">Services Information</h3>
+                        <div className="h-px bg-slate-200 flex-1"></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {services.map((service) => (
+                            <ServiceTab key={service.id} {...service} />
+                        ))}
+                    </div>
+                </div>
+
+                {/* Recent Updates & Notifications Section (Floating at bottom style) */}
+                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl overflow-hidden mt-12 bg-gradient-to-br from-white to-slate-50">
+                    <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md sticky top-0 z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                                <Bell size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Recent Activity Hub</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Real-time updates from {selectedBranch}</p>
+                            </div>
                         </div>
-                        <div className="h-64 flex-1">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={pieData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
-                                        paddingAngle={8}
-                                        dataKey="value"
-                                        stroke="none"
-                                    >
-                                        {pieData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={4} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '12px' }}
-                                        itemStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2">
-                            {pieData.slice(0, 4).map((entry, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest truncate">{entry.name}</span>
+                        <span className="px-5 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+                            12 New Notifications
+                        </span>
+                    </div>
+                    
+                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar px-2">
+                        <div className="divide-y divide-slate-100">
+                            {branchFilteredTasks.slice(0, 8).map((update, idx) => (
+                                <div key={idx} className="p-6 flex items-start gap-6 hover:bg-white transition-colors group cursor-pointer">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-all group-hover:scale-110 ${
+                                        update.status === TaskStatus.COMPLETED ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                        update.status === TaskStatus.OVERDUE ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                        'bg-blue-50 text-blue-600 border-blue-100'
+                                    }`}>
+                                        <ClipboardList size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h4 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{update.clientName}</h4>
+                                            <span className="text-[10px] font-bold text-slate-400 font-mono">{update.dueDate}</span>
+                                        </div>
+                                        <p className="text-sm font-medium text-slate-500 line-clamp-1">{update.serviceType} processing initiated for period {update.period}.</p>
+                                        <div className="mt-3 flex items-center gap-4">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                                <Users size={12} /> {update.assignedTo || 'System'}
+                                            </span>
+                                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                                update.status === TaskStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700' : 
+                                                'bg-indigo-100 text-indigo-700'
+                                            }`}>
+                                                {update.status}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
                     </div>
-
-                    {/* Right Chart: Workload (Admin) or Personalized Task Timeline (Employee) */}
-                    <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-                        <div className="flex items-center justify-between mb-8">
-                            <div>
-                                <h3 className="text-lg font-black text-slate-800 tracking-tight">
-                                    {userRole === UserRole.ADMIN ? 'Workforce Allocation' : 'Personal Performance'}
-                                </h3>
-                                <p className="text-xs font-medium text-slate-400">Activity and engagement tracking</p>
-                            </div>
-                            {userRole === UserRole.ADMIN && <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Click bar to drill down</span>}
-                        </div>
-                        <div className="h-80">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
-                                    data={userRole === UserRole.ADMIN ? staffWorkload : [
-                                        { name: 'Week 1', tasks: 12 },
-                                        { name: 'Week 2', tasks: 18 },
-                                        { name: 'Week 3', tasks: 15 },
-                                        { name: 'Week 4', tasks: 22 },
-                                    ]}
-                                    margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                                    onClick={handleStaffBarClick}
-                                    className="cursor-pointer"
-                                    barGap={12}
-                                >
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(99, 102, 241, 0.05)' }}
-                                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '16px' }}
-                                    />
-                                    <Bar
-                                        dataKey={userRole === UserRole.ADMIN ? "pendingTasks" : "tasks"}
-                                        fill="#6366f1"
-                                        radius={[8, 8, 8, 8]}
-                                        barSize={32}
-                                        className="hover:fill-indigo-400 transition-colors"
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Bottom Row: Priority List */}
-                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <div>
-                            <h3 className="text-lg font-black text-slate-800 tracking-tight">Priority Engagements</h3>
-                            <p className="text-xs font-medium text-slate-400 mt-0.5">Focus items requiring immediate resolution</p>
-                        </div>
-                        <button onClick={() => onNavigate && onNavigate('tasks')} className="px-5 py-2.5 bg-white border border-slate-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors shadow-sm">View Full Registry</button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-slate-600">
-                            <thead className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] border-b border-slate-100">
-                                <tr>
-                                    <th className="px-8 py-5">Client Identity</th>
-                                    <th className="px-8 py-5">Engagement Type</th>
-                                    <th className="px-8 py-5">Due Deadline</th>
-                                    <th className="px-8 py-5">Process Status</th>
-                                    <th className="px-8 py-5">Assigned To</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {displayTasks.slice(0, 6).map(task => (
-                                    <tr key={task.id} className="hover:bg-indigo-50/30 transition-colors group">
-                                        <td className="px-8 py-6 font-black text-slate-800 tracking-tight">{task.clientName}</td>
-                                        <td className="px-8 py-6">
-                                            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest rounded-lg border border-indigo-100/50">
-                                                {task.serviceType}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-6 text-slate-500 font-bold">{task.dueDate}</td>
-                                        <td className="px-8 py-6">
-                                            <StatusBadge status={task.status} />
-                                        </td>
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center font-black text-xs text-indigo-600 border border-slate-200 uppercase">
-                                                    {(task.assignedTo || '?').charAt(0)}
-                                                </div>
-                                                <span className="font-bold text-slate-700">{task.assignedTo || 'Unassigned'}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    
+                    <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
+                        <button 
+                            onClick={() => onNavigate?.('tasks')}
+                            className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] hover:text-slate-900 transition-colors"
+                        >
+                            View Comprehensive Log
+                        </button>
                     </div>
                 </div>
             </div>

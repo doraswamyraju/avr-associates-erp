@@ -86,3 +86,13 @@ export const MOCK_TASK_HISTORY: TaskHistoryLog[] = [
 export const MOCK_INVOICES: Invoice[] = [
     { id: 'INV-1023', clientId: 'C001', clientName: 'Sri Venkateswara Traders', date: '2024-06-01', amount: 15000, status: 'Paid', items: ['Retainer Fee - May', 'GSTR-3B Filing'] },
 ];
+
+export const MOCK_INCOMING_REGISTER: IncomingRegisterEntry[] = [
+    { id: 'INC001', clientId: 'C001', clientName: 'Sri Venkateswara Traders', date: '2024-06-10', subject: 'GST Notice Response', receivedBy: 'Suresh K', status: 'Pending', branch: BranchName.RAVULAPALEM },
+    { id: 'INC002', clientId: 'C002', clientName: 'Krishna & Co.', date: '2024-06-12', subject: 'Bank Statement FY 23-24', receivedBy: 'Priya D', status: 'Processed', branch: BranchName.AMALAPURAM },
+];
+
+export const MOCK_VISITOR_REGISTER: VisitorRegisterEntry[] = [
+    { id: 'VIS001', visitorName: 'Anil Kumar', phone: '9000012345', purpose: 'ITR Consultation', date: '2024-06-14', time: '10:30 AM', whomToMeet: 'Suresh K', status: 'In', branch: BranchName.RAVULAPALEM },
+    { id: 'VIS002', visitorName: 'Rajesh V', phone: '9888876543', purpose: 'New Registration', date: '2024-06-14', time: '11:15 AM', whomToMeet: 'Priya D', status: 'Scheduled', branch: BranchName.AMALAPURAM },
+];

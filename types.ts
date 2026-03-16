@@ -194,3 +194,26 @@ export interface ClientDocument {
     uploadDate: string;
     status: 'Pending' | 'Verified';
 }
+
+export interface IncomingRegisterEntry {
+    id: string;
+    clientId: string;
+    clientName: string;
+    date: string;
+    subject: string;
+    receivedBy: string;
+    status: 'Pending' | 'Processed' | 'Archived';
+    branch: BranchName;
+}
+
+export interface VisitorRegisterEntry {
+    id: string;
+    visitorName: string;
+    phone: string;
+    purpose: string;
+    date: string;
+    time: string;
+    whomToMeet: string;
+    status: 'In' | 'Out' | 'Scheduled';
+    branch: BranchName;
+}

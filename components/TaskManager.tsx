@@ -167,7 +167,7 @@ const ProjectDetailView: React.FC<{
     const marginPercent = project.budget ? ((profitability / project.budget) * 100).toFixed(1) : 0;
 
     const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'financials'>('overview');
-    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
     const [documents, setDocuments] = useState<any[]>([]);
 
     const handleImportDocuments = async (data: any[]) => {
@@ -606,7 +606,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({
     setActiveTaskTimer
 }) => {
     const [activeTab, setActiveTab] = useState<'tasks' | 'projects'>('tasks');
-    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
+    const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [clients, setClients] = useState<Client[]>([]);

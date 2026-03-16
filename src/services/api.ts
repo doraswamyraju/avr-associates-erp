@@ -240,6 +240,19 @@ export const api = {
         if (!response.ok) throw new Error('Failed to create time log');
         return response.json();
     },
+    
+    // Registers
+    getIncomingRegister: async (): Promise<any[]> => {
+        const response = await fetch(`${API_BASE_URL}/incoming_register.php`);
+        if (!response.ok) throw new Error('Failed to fetch incoming register');
+        return response.json();
+    },
+
+    getVisitorRegister: async (): Promise<any[]> => {
+        const response = await fetch(`${API_BASE_URL}/visitor_register.php`);
+        if (!response.ok) throw new Error('Failed to fetch visitor register');
+        return response.json();
+    },
 
     getTimeLogs: async (taskId: string): Promise<any[]> => {
         const response = await fetch(`${API_BASE_URL}/time_logs.php?taskId=${taskId}`);

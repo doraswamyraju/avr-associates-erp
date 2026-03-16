@@ -17,7 +17,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const fetchData = async () => {
