@@ -196,10 +196,10 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             title="Active Projects" 
                             count={branchFilteredProjects.length} 
                             icon={Briefcase} 
-                            actionLabel="All Projects"
+                            actionLabel="New Project"
                             variant="emerald"
                             onCardClick={() => onNavigate?.('tasks')}
-                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('tasks'); }}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('tasks', { quickAction: 'NEW_PROJECT' }); }}
                         />
                         <TrackerCard 
                             title="Audit Reports" 

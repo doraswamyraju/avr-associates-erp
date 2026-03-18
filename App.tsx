@@ -98,6 +98,14 @@ const App: React.FC = () => {
   const handleNavigation = (tab: string, params?: any) => {
     if (params) {
       setPageParams(params);
+      if (params.quickAction) {
+        setQuickAction(params.quickAction);
+      } else {
+        setQuickAction(null);
+      }
+    } else {
+      setPageParams(null);
+      setQuickAction(null);
     }
     setActiveTab(tab);
   };
@@ -145,7 +153,7 @@ const App: React.FC = () => {
       case 'services':
         return <ServiceCatalogue selectedBranch={selectedBranch} />;
       case 'staff':
-        return <StaffManager selectedBranch={selectedBranch} availableBranches={availableBranches} />;
+        return <StaffManager selectedBranch={selectedBranch} availableBranches={availableBranches} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       case 'branches':
         return <BranchManager />;
       default:

@@ -11,9 +11,11 @@ import { api } from '../src/services/api';
 interface StaffManagerProps {
     selectedBranch: BranchName;
     availableBranches: Branch[];
+    quickAction?: string | null;
+    onQuickActionHandled?: () => void;
 }
 
-const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBranches }) => {
+const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBranches, quickAction, onQuickActionHandled }) => {
     const [staffList, setStaffList] = useState<Staff[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +42,13 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (quickAction === 'NEW_EMPLOYEE') {
+            setIsAddModalOpen(true);
+            if (onQuickActionHandled) onQuickActionHandled();
+        }
+    }, [quickAction, onQuickActionHandled]);
 
     const filteredStaff = staffList.filter(staff => {
         const matchesBranch = selectedBranch === BranchName.ALL || staff.branch === selectedBranch;
