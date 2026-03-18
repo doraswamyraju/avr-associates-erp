@@ -78,7 +78,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
         { id: 'deleted', name: 'Deleted Users', icon: Trash2, color: 'text-slate-400', bg: 'bg-slate-50' },
     ];
 
-    const TrackerCard = ({ title, count, icon: Icon, actionLabel, onClickAction, variant = 'blue' }: any) => {
+    const TrackerCard = ({ title, count, icon: Icon, actionLabel, onClickAction, variant = 'blue', onCardClick }: any) => {
         const bgColors: any = {
             blue: 'bg-[#67B7D1] hover:bg-[#5AA8C0]',
             indigo: 'bg-indigo-600 hover:bg-indigo-700',
@@ -89,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
 
         return (
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
-                <div className="p-10 flex-1 relative">
+                <div className="p-10 flex-1 relative cursor-pointer" onClick={onCardClick}>
                     <div className="absolute top-8 right-8 text-slate-100 transition-colors group-hover:text-indigo-100">
                         <Icon size={64} strokeWidth={1.5} />
                     </div>
@@ -180,7 +180,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={Users} 
                             actionLabel="Add Client"
                             variant="blue"
-                            onClickAction={() => onNavigate?.('clients', { quickAction: 'NEW_CLIENT' })}
+                            onCardClick={() => onNavigate?.('clients')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('clients', { quickAction: 'NEW_CLIENT' }); }}
                         />
                         <TrackerCard 
                             title="Employees" 
@@ -188,7 +189,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={UserPlus} 
                             actionLabel="Register Staff"
                             variant="indigo"
-                            onClickAction={() => onNavigate?.('staff', { quickAction: 'NEW_EMPLOYEE' })}
+                            onCardClick={() => onNavigate?.('staff')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('staff', { quickAction: 'NEW_EMPLOYEE' }); }}
                         />
                          <TrackerCard 
                             title="Active Projects" 
@@ -196,7 +198,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={Briefcase} 
                             actionLabel="All Projects"
                             variant="emerald"
-                            onClickAction={() => onNavigate?.('tasks')}
+                            onCardClick={() => onNavigate?.('tasks')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('tasks'); }}
                         />
                         <TrackerCard 
                             title="Audit Reports" 
@@ -204,7 +207,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={FileBarChart} 
                             actionLabel="View Analytics"
                             variant="slate"
-                            onClickAction={() => onNavigate?.('reports')}
+                            onCardClick={() => onNavigate?.('reports')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('reports'); }}
                         />
                     </div>
                 </div>
@@ -224,7 +228,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={PencilLine} 
                             actionLabel="Add Incoming"
                             variant="blue"
-                            onClickAction={() => onNavigate?.('reports')}
+                            onCardClick={() => onNavigate?.('reports')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('reports'); }}
                         />
                         <TrackerCard 
                             title="Visitor Register" 
@@ -232,7 +237,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={UserPlus} 
                             actionLabel="Add Visitor"
                             variant="blue"
-                            onClickAction={() => onNavigate?.('reports')}
+                            onCardClick={() => onNavigate?.('reports')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('reports'); }}
                         />
                     </div>
                 </div>

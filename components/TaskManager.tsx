@@ -8,7 +8,7 @@ import {
     LayoutGrid, List, Plus, X, Play, Clock, ChevronRight, Search,
     User as UserIcon, StopCircle, IndianRupee, Layers, TrendingUp, Zap,
     MousePointer2, Briefcase, History, AlertTriangle, Trash2, FileText, CreditCard,
-    Square, MoreHorizontal
+    Square, MoreHorizontal, Eye, Edit
 } from 'lucide-react';
 
 interface TaskManagerProps {
@@ -68,7 +68,11 @@ const TaskBoard: React.FC<{
                                                 {isCurrentlyTracking ? <><Square size={12} className="fill-current" /> STOP</> : <><Play size={12} className="fill-current" /> START</>}
                                             </button>
                                         )}
-                                        <button onClick={() => onTaskClick(task)} className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"><MoreHorizontal size={14} /></button>
+                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={(e) => { e.stopPropagation(); onTaskClick(task); }} className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors" title="View"><Eye size={16} strokeWidth={2.5} /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); onTaskClick(task); }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit"><Edit size={16} strokeWidth={2.5} /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); }} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors" title="Delete"><Trash2 size={16} strokeWidth={2.5} /></button>
+                                        </div>
                                     </td>
                                 </tr>
                             );

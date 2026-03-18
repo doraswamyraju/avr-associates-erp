@@ -4,7 +4,7 @@ import { BranchName, Staff, TaskStatus, Task, Branch } from '../types';
 import {
     Search, Plus, MapPin, Mail, Phone, MoreHorizontal, Clock,
     AtSign, Briefcase, User, ChevronRight, List, LayoutGrid,
-    IndianRupee, TrendingUp, ShieldCheck, Zap, AlertCircle
+    IndianRupee, TrendingUp, ShieldCheck, Zap, AlertCircle, Edit, Trash2, Eye
 } from 'lucide-react';
 import { api } from '../src/services/api';
 
@@ -229,7 +229,11 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5 text-right">
-                                                <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all shadow-sm border border-transparent hover:border-slate-200"><MoreHorizontal size={20} /></button>
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => { e.stopPropagation(); }} className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors" title="View"><Eye size={16} strokeWidth={2.5} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit"><Edit size={16} strokeWidth={2.5} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); }} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors" title="Delete"><Trash2 size={16} strokeWidth={2.5} /></button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );

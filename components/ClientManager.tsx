@@ -6,7 +6,7 @@ import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
     Building, LayoutGrid, List, Landmark, MapPin, UserPlus,
-    Calendar, Users, Info, Trash2, Edit, FolderOpen
+    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye
 } from 'lucide-react';
 
 import { api } from '../src/services/api';
@@ -325,7 +325,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                                             <td className="px-6 py-5"><span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${client.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-400'}`}>{client.status}</span></td>
                                             <td className="px-6 py-5"><div className="flex flex-col gap-0.5 text-xs text-slate-500 font-bold"><span>{client.phone}</span><span className="opacity-70 lowercase font-medium">{client.email}</span></div></td>
                                             <td className="px-6 py-5"><span className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl uppercase tracking-widest">{client.branch}</span></td>
-                                            <td className="px-6 py-5 text-right"><button className="text-indigo-600 hover:text-indigo-800 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 ml-auto group-hover:translate-x-1 transition-transform">View <ChevronRight size={14} strokeWidth={3} /></button></td>
+                                            <td className="px-6 py-5 text-right">
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={(e) => { e.stopPropagation(); setSelectedClient(client); setViewMode('client_detail'); }} className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors" title="View"><Eye size={16} strokeWidth={2.5} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setClientIdToEdit(client); setViewMode('onboarding'); }} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors" title="Edit"><Edit size={16} strokeWidth={2.5} /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); if(confirm('Are you sure you want to delete this client?')) { api.deleteClient(client.id).then(()=>setClients(clients.filter(c=>c.id!==client.id))).catch(err=>alert('Failed to delete')) } }} className="p-2 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors" title="Delete"><Trash2 size={16} strokeWidth={2.5} /></button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
