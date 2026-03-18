@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BranchName, TaskStatus, UserRole, Task, Client, Invoice, Staff, User, IncomingRegisterEntry, VisitorRegisterEntry } from '../types';
+import { BranchName, TaskStatus, UserRole, Task, Client, Invoice, Staff, User, IncomingRegisterEntry, VisitorRegisterEntry, Project } from '../types';
 import { api } from '../src/services/api';
 import {
     Users, AlertCircle, CheckCircle2, IndianRupee, Clock, TrendingUp,
@@ -150,7 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                          </div>
                         {userRole === UserRole.ADMIN && (
                             <button 
-                                onClick={() => alert("Branch Management - Under Construction")}
+                                onClick={() => onNavigate?.('branches')}
                                 className="px-8 py-4 bg-white border-2 border-slate-200 text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-50 shadow-lg transition-all active:scale-95 flex items-center gap-3"
                             >
                                 <Plus size={18} /> New Branch

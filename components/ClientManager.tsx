@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
 import { SERVICE_TYPES } from '../constants';
-import { BranchName, Client, Project, Task, TaskStatus } from '../types';
+import { BranchName, Client, Project, Task, TaskStatus, Branch } from '../types';
 import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
@@ -13,13 +13,14 @@ import { api } from '../src/services/api';
 
 interface ClientManagerProps {
     selectedBranch: BranchName;
-    quickAction?: string | null;
-    onQuickActionHandled?: () => void;
+    quickAction: string | null;
+    onQuickActionHandled: () => void;
+    availableBranches: Branch[];
 }
 
 type ViewState = 'directory' | 'client_detail' | 'onboarding';
 
-const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled }) => {
+const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, availableBranches }) => {
     const [viewMode, setViewMode] = useState<ViewState>('directory');
     const [directoryViewType, setDirectoryViewType] = useState<'grid' | 'list'>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -207,8 +208,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
         return <ClientOnboardingWizard
             onBack={() => { setViewMode('directory'); setClientIdToEdit(undefined); }}
             onSave={handleSaveClient}
-            defaultBranch={selectedBranch === BranchName.ALL ? BranchName.RAVULAPALEM : selectedBranch}
-            initialData={clientIdToEdit}
+            defaultBranch={selectedBranch === BranchName.ALL ? 'Ravulapalem' : selectedBranch}
+            availableBranches={availableBranches}
+            initialData={clientIdToEdit || undefined}
         />;
     }
 
@@ -339,8 +341,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
     );
 };
 
-interface OnboardingProps { onBack: () => void; onSave: (client: Client) => void; defaultBranch: BranchName; initialData?: Client; }
-const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, defaultBranch, initialData }) => {
+interface OnboardingProps { onBack: () => void; onSave: (client: Client) => void; defaultBranch: BranchName; initialData?: Client; availableBranches: Branch[]; }
+const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, defaultBranch, initialData, availableBranches }) => {
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState<Partial<Client>>(initialData || {
         name: '', tradeName: '', group: '', type: 'Individual', branch: defaultBranch, status: 'Active',
@@ -562,7 +564,7 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
                                     </div>
                                     <div className="grid grid-cols-3 gap-6">
                                         <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Constitution *</label><select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-indigo-100 outline-none uppercase" value={formData.type} onChange={e => updateField('type', e.target.value)}><option>Individual</option><option>Company</option><option>Partnership</option><option>LLP</option></select></div>
-                                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Branch Hub *</label><select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-indigo-100 outline-none uppercase" value={formData.branch} onChange={e => updateField('branch', e.target.value)}>{Object.values(BranchName).filter(b => b !== BranchName.ALL).map(b => <option key={b}>{b}</option>)}</select></div>
+                                        <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Branch Hub *</label><select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-indigo-100 outline-none uppercase" value={formData.branch} onChange={e => updateField('branch', e.target.value)}>{availableBranches.filter(b => b.name !== BranchName.ALL).map(b => <option key={b.id} value={b.name}>{b.name}</option>)}</select></div>
                                         <div className="space-y-2"><label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-2">Internal File No.</label><input className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-mono font-black shadow-inner" value={formData.fileNumber} onChange={e => updateField('fileNumber', e.target.value)} placeholder="AVR/24/001" /></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-8">

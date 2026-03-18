@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
-import { BranchName, Staff, TaskStatus, Task } from '../types';
+import { BranchName, Staff, TaskStatus, Task, Branch } from '../types';
 import {
     Search, Plus, MapPin, Mail, Phone, MoreHorizontal, Clock,
     AtSign, Briefcase, User, ChevronRight, List, LayoutGrid,
@@ -10,9 +10,10 @@ import { api } from '../src/services/api';
 
 interface StaffManagerProps {
     selectedBranch: BranchName;
+    availableBranches: Branch[];
 }
 
-const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
+const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBranches }) => {
     const [staffList, setStaffList] = useState<Staff[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -239,17 +240,17 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch }) => {
                 )}
                 <div className="h-12 w-full"></div>
             </div>
-            {isAddModalOpen && <AddStaffModal onClose={() => setIsAddModalOpen(false)} onAdd={() => { setIsAddModalOpen(false); fetchData(); }} />}
+            {isAddModalOpen && <AddStaffModal onClose={() => setIsAddModalOpen(false)} onAdd={() => { setIsAddModalOpen(false); fetchData(); }} availableBranches={availableBranches} />}
         </div>
     );
 };
 
-const AddStaffModal: React.FC<{ onClose: () => void, onAdd: () => void }> = ({ onClose, onAdd }) => {
+const AddStaffModal: React.FC<{ onClose: () => void, onAdd: () => void, availableBranches: Branch[] }> = ({ onClose, onAdd, availableBranches }) => {
     const [formData, setFormData] = useState({
         name: '',
         username: '',
         role: '',
-        branch: BranchName.RAVULAPALEM,
+        branch: availableBranches[0]?.name || 'Ravulapalem',
         email: '',
         password: '',
         rate: 200
@@ -324,7 +325,7 @@ const AddStaffModal: React.FC<{ onClose: () => void, onAdd: () => void }> = ({ o
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Base Branch</label>
-                                <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value as BranchName })}>{Object.values(BranchName).filter(b => b !== BranchName.ALL).map(b => <option key={b}>{b}</option>)}</select>
+                                <select className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none" value={formData.branch} onChange={e => setFormData({ ...formData, branch: e.target.value as BranchName })}>{availableBranches.filter(b => b.name !== BranchName.ALL).map(b => <option key={b.id} value={b.name}>{b.name}</option>)}</select>
                             </div>
                         </div>
 

@@ -258,5 +258,33 @@ export const api = {
         const response = await fetch(`${API_BASE_URL}/time_logs.php?taskId=${taskId}`);
         if (!response.ok) throw new Error('Failed to fetch time logs');
         return response.json();
+    },
+
+    // Branches
+    getBranches: async (): Promise<any[]> => {
+        const response = await fetch(`${API_BASE_URL}/branches.php`);
+        if (!response.ok) throw new Error('Failed to fetch branches');
+        return response.json();
+    },
+
+    createBranch: async (name: string): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/branches.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create branch');
+        }
+        return response.json();
+    },
+
+    deleteBranch: async (id: string): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/branches.php?id=${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete branch');
+        return response.json();
     }
 };

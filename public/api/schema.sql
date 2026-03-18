@@ -13,11 +13,18 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('Admin', 'Employee', 'Client') NOT NULL,
     avatar VARCHAR(255),
     client_id VARCHAR(50),
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     is_clocked_in BOOLEAN DEFAULT FALSE,
     clock_in_time DATETIME,
     reset_token VARCHAR(100) NULL,
     token_expiry DATETIME NULL
+);
+
+-- Branches Table
+CREATE TABLE IF NOT EXISTS branches (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(150) UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Clients Table
@@ -27,7 +34,7 @@ CREATE TABLE IF NOT EXISTS clients (
     pan VARCHAR(20),
     gstin VARCHAR(20),
     type ENUM('Individual', 'Company', 'Partnership', 'LLP'),
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     phone VARCHAR(20),
     email VARCHAR(100),
     status ENUM('Active', 'Inactive') DEFAULT 'Active',
@@ -56,7 +63,7 @@ CREATE TABLE IF NOT EXISTS projects (
     start_date DATE,
     due_date DATE,
     manager VARCHAR(100),
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     priority ENUM('High', 'Medium', 'Low'),
     budget DECIMAL(15, 2),
     total_hours_tracked DECIMAL(10, 2) DEFAULT 0,
@@ -74,7 +81,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status ENUM('New', 'In Progress', 'Pending Client', 'Under Review', 'Filed', 'Completed', 'Overdue'),
     assigned_to VARCHAR(100),
     priority ENUM('High', 'Medium', 'Low'),
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     sla_progress INT DEFAULT 0,
     total_tracked_minutes INT DEFAULT 0,
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
@@ -109,7 +116,7 @@ CREATE TABLE IF NOT EXISTS staff (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     role VARCHAR(100),
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     avatar_url VARCHAR(255),
     email VARCHAR(100),
     is_clocked_in BOOLEAN DEFAULT FALSE,
@@ -170,7 +177,7 @@ CREATE TABLE IF NOT EXISTS incoming_register (
     mode ENUM('Courier', 'Hand', 'Post', 'Email') NOT NULL,
     subject TEXT,
     received_by VARCHAR(100),
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     status ENUM('Pending', 'Processed', 'Filed') DEFAULT 'Pending'
 );
 
@@ -183,6 +190,6 @@ CREATE TABLE IF NOT EXISTS visitor_register (
     contact_no VARCHAR(20),
     entry_time DATETIME,
     exit_time DATETIME,
-    branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
+    branch VARCHAR(100),
     status ENUM('In', 'Out') DEFAULT 'In'
 );

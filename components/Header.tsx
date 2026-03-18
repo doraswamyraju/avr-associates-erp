@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Menu, Bell, Search, ChevronDown, Building2, LogOut, Clock, PlayCircle, StopCircle, Target } from 'lucide-react';
-import { BranchName, User, UserRole, Task } from '../types';
+import { BranchName, User, UserRole, Task, Branch } from '../types';
 
 interface HeaderProps {
     selectedBranch: BranchName;
     setSelectedBranch: (branch: BranchName) => void;
+    availableBranches: Branch[];
     toggleSidebar: () => void;
     user: User;
     onLogout: () => void;
@@ -13,7 +14,7 @@ interface HeaderProps {
     activeTaskTimer?: {task: Task, startTime: Date} | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ selectedBranch, setSelectedBranch, toggleSidebar, user, onLogout, onClockIn, onClockOut, activeTaskTimer }) => {
+const Header: React.FC<HeaderProps> = ({ selectedBranch, setSelectedBranch, availableBranches, toggleSidebar, user, onLogout, onClockIn, onClockOut, activeTaskTimer }) => {
     const [elapsedTime, setElapsedTime] = useState('00:00:00');
     const [taskElapsedTime, setTaskElapsedTime] = useState('00:00');
 
@@ -60,9 +61,9 @@ const Header: React.FC<HeaderProps> = ({ selectedBranch, setSelectedBranch, togg
                             <span>{selectedBranch}</span>
                             <ChevronDown size={14} className="text-slate-400" />
                         </button>
-                        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-100 py-1 hidden group-hover:block z-50">
-                            {Object.values(BranchName).map((branch) => (
-                                <button key={branch} onClick={() => setSelectedBranch(branch)} className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 ${selectedBranch === branch ? 'text-indigo-600 font-medium' : 'text-slate-700'}`}>{branch}</button>
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-100 py-1 hidden group-hover:block z-50 h-56 overflow-y-auto custom-scrollbar">
+                            {availableBranches.map((branch) => (
+                                <button key={branch.id} onClick={() => setSelectedBranch(branch.name)} className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 ${selectedBranch === branch.name ? 'text-indigo-600 font-medium' : 'text-slate-700'}`}>{branch.name}</button>
                             ))}
                         </div>
                     </div>

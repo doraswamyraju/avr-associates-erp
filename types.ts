@@ -22,12 +22,16 @@ export enum Priority {
     LOW = 'Low'
 }
 
-export enum BranchName {
-    RAVULAPALEM = 'Ravulapalem',
-    ATREYAPURAM = 'Atreyapuram',
-    AMALAPURAM = 'Amalapuram',
-    VERSATILE = 'Versatile',
-    ALL = 'All Branches'
+export const BranchName = {
+    ALL: 'All Branches'
+} as const;
+
+export type BranchName = string;
+
+export interface Branch {
+    id: string;
+    name: string;
+    createdAt?: string;
 }
 
 export enum UserRole {

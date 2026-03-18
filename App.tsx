@@ -10,9 +10,11 @@ import ComplianceManager from './components/ComplianceManager';
 import ReportsAnalytics from './components/ReportsAnalytics';
 import ServiceCatalogue from './components/ServiceCatalogue';
 import StaffManager from './components/StaffManager';
+import BranchManager from './components/BranchManager';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
-import { BranchName, User, UserRole, Task } from './types';
+import { BranchName, User, UserRole, Task, Branch } from './types';
+import { api } from './src/services/api';
 import { MOCK_CLIENTS } from './constants';
 import { Hammer, Plus, UserPlus, FileText, Briefcase, CreditCard, UserCog } from 'lucide-react';
 
@@ -22,6 +24,7 @@ const App: React.FC = () => {
   const [selectedBranch, setSelectedBranch] = useState<BranchName>(BranchName.ALL);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
 
   // Task-wise Timer Global State
   const [activeTaskTimer, setActiveTaskTimer] = useState<{ task: Task, startTime: Date } | null>(null);
@@ -41,6 +44,21 @@ const App: React.FC = () => {
       setResetToken(token);
     }
   }, []);
+
+  const loadBranches = async () => {
+    try {
+      const branches = await api.getBranches();
+      setAvailableBranches(branches);
+    } catch(e) {
+      console.error('Failed to load branches', e);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+        loadBranches();
+    }
+  }, [user]);
 
   const clearResetFlow = () => {
     setResetToken(null);
@@ -105,7 +123,7 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard selectedBranch={selectedBranch} userRole={user.role} currentUser={user} onNavigate={handleNavigation} />;
       case 'clients':
-        return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
+        return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} />;
       case 'tasks':
         return (
           <TaskManager
@@ -127,7 +145,9 @@ const App: React.FC = () => {
       case 'services':
         return <ServiceCatalogue selectedBranch={selectedBranch} />;
       case 'staff':
-        return <StaffManager selectedBranch={selectedBranch} />;
+        return <StaffManager selectedBranch={selectedBranch} availableBranches={availableBranches} />;
+      case 'branches':
+        return <BranchManager />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">
@@ -153,6 +173,7 @@ const App: React.FC = () => {
         <Header
           selectedBranch={selectedBranch}
           setSelectedBranch={setSelectedBranch}
+          availableBranches={availableBranches}
           toggleSidebar={toggleSidebar}
           user={user}
           onLogout={() => setUser(null)}

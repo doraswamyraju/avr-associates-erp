@@ -56,6 +56,40 @@ try {
     )");
     echo "Table 'visitor_register' checked/created.<br>";
 
+    // Add Branches Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS branches (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(150) UNIQUE NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    echo "Table 'branches' checked/created.<br>";
+
+    // Seed initial branches if table is empty
+    $stmt = $pdo->query("SELECT COUNT(*) FROM branches");
+    if ($stmt->fetchColumn() == 0) {
+        $initial_branches = ['Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'];
+        $insertStmt = $pdo->prepare("INSERT INTO branches (id, name) VALUES (?, ?)");
+        foreach ($initial_branches as $idx => $bname) {
+            $insertStmt->execute(['BR-'.($idx+1), $bname]);
+        }
+        echo "Initial branches seeded.<br>";
+    }
+
+    // Alter ENUM branch columns to VARCHAR(100)
+    $tablesToAlter = [
+        'users', 'clients', 'projects', 'tasks', 'staff', 'incoming_register', 'visitor_register'
+    ];
+    
+    foreach ($tablesToAlter as $table) {
+        try {
+            $sql = "ALTER TABLE `$table` MODIFY COLUMN `branch` VARCHAR(100)";
+            $pdo->exec($sql);
+            echo "Altered branch column in `$table` to VARCHAR.<br>";
+        } catch (PDOException $e) {
+            echo "Skipped altering `$table` (might not exist): " . $e->getMessage() . "<br>";
+        }
+    }
+
 }
 catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
