@@ -29,18 +29,35 @@ try {
         echo "Columns 'username', 'password_hash' already exist in 'users'.<br>";
     }
 
-    // Add Incoming Register Table
-    $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_register (
+    // Update Incoming Register Table Structure
+    $pdo->exec("DROP TABLE IF EXISTS incoming_register");
+    $pdo->exec("CREATE TABLE incoming_register (
         id VARCHAR(50) PRIMARY KEY,
+        reference_code VARCHAR(150),
+        customer_name VARCHAR(150),
+        service_name VARCHAR(150),
         date DATE NOT NULL,
-        sender_name VARCHAR(150) NOT NULL,
-        mode ENUM('Courier', 'Hand', 'Post', 'Email') NOT NULL,
-        subject TEXT,
-        received_by VARCHAR(100),
-        branch ENUM('Ravulapalem', 'Atreyapuram', 'Amalapuram', 'Versatile', 'All Branches'),
-        status ENUM('Pending', 'Processed', 'Filed') DEFAULT 'Pending'
+        assessment_year VARCHAR(50),
+        period_1 VARCHAR(50),
+        period_2 VARCHAR(50),
+        due_date DATE,
+        completed_date DATE,
+        staff_name VARCHAR(150),
+        incoming_documents TEXT,
+        verified_by VARCHAR(150),
+        verified_status VARCHAR(50),
+        arn_ref_no VARCHAR(100),
+        bill_no VARCHAR(100),
+        bill_amount DECIMAL(15, 2),
+        mode_of_payment VARCHAR(50),
+        payment_info VARCHAR(255),
+        bill_status VARCHAR(50),
+        purpose_narration TEXT,
+        status VARCHAR(50) DEFAULT 'Data Pending',
+        remarks TEXT,
+        branch VARCHAR(100)
     )");
-    echo "Table 'incoming_register' checked/created.<br>";
+    echo "Table 'incoming_register' recreated with new expanded schema.<br>";
 
     // Add Visitor Register Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS visitor_register (

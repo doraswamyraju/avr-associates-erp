@@ -201,12 +201,28 @@ export interface ClientDocument {
 
 export interface IncomingRegisterEntry {
     id: string;
-    clientId: string;
-    clientName: string;
+    referenceCode?: string;
+    customerName?: string;
+    serviceName?: string;
     date: string;
-    subject: string;
-    receivedBy: string;
-    status: 'Pending' | 'Processed' | 'Archived';
+    assessmentYear?: string;
+    period1?: string;
+    period2?: string;
+    dueDate?: string;
+    completedDate?: string;
+    staffName?: string;
+    incomingDocuments?: string;
+    verifiedBy?: string;
+    verifiedStatus?: string;
+    arnRefNo?: string;
+    billNo?: string;
+    billAmount?: number;
+    modeOfPayment?: string;
+    paymentInfo?: string;
+    billStatus?: string;
+    purposeNarration?: string;
+    status: string;
+    remarks?: string;
     branch: BranchName;
 }
 

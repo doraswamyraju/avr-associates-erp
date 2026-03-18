@@ -1,6 +1,6 @@
 // src/services/api.ts
 
-import { Client, Project, Task, Invoice, Staff } from '../../types';
+import { Client, Project, Task, Invoice, Staff, IncomingRegisterEntry } from '../../types';
 
 const API_BASE_URL = import.meta.env.PROD ? '/api' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost/avr-associates-erp/api');
 
@@ -242,9 +242,22 @@ export const api = {
     },
     
     // Registers
-    getIncomingRegister: async (): Promise<any[]> => {
+    getIncomingRegister: async (): Promise<IncomingRegisterEntry[]> => {
         const response = await fetch(`${API_BASE_URL}/incoming_register.php`);
         if (!response.ok) throw new Error('Failed to fetch incoming register');
+        return response.json();
+    },
+
+    createIncomingRegister: async (data: Omit<IncomingRegisterEntry, 'id'>): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/incoming_register.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create entry');
+        }
         return response.json();
     },
 

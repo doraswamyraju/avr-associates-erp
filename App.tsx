@@ -11,6 +11,7 @@ import ReportsAnalytics from './components/ReportsAnalytics';
 import ServiceCatalogue from './components/ServiceCatalogue';
 import StaffManager from './components/StaffManager';
 import BranchManager from './components/BranchManager';
+import IncomingRegisterManager from './components/IncomingRegisterManager';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import { BranchName, User, UserRole, Task, Branch } from './types';
@@ -88,6 +89,7 @@ const App: React.FC = () => {
     if (action === 'NEW_TASK' || action === 'NEW_PROJECT') setActiveTab('tasks');
     if (action === 'NEW_INVOICE') setActiveTab('billing');
     if (action === 'NEW_EMPLOYEE') setActiveTab('staff');
+    if (action === 'NEW_INCOMING') setActiveTab('incoming');
 
     setQuickAction(action);
     setIsFabOpen(false);
@@ -156,6 +158,8 @@ const App: React.FC = () => {
         return <StaffManager selectedBranch={selectedBranch} availableBranches={availableBranches} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       case 'branches':
         return <BranchManager />;
+      case 'incoming':
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">

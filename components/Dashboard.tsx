@@ -228,8 +228,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             icon={PencilLine} 
                             actionLabel="Add Incoming"
                             variant="blue"
-                            onCardClick={() => onNavigate?.('reports')}
-                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('reports'); }}
+                            onCardClick={() => onNavigate?.('incoming')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('incoming', { quickAction: 'NEW_INCOMING' }); }}
                         />
                         <TrackerCard 
                             title="Visitor Register" 
