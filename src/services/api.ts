@@ -70,7 +70,16 @@ export const api = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(client)
         });
-        if (!response.ok) throw new Error('Failed to create client');
+        if (!response.ok) {
+            let errorMsg = 'Failed to create client';
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg;
+            } catch (e) {
+                // If it's not JSON, try text
+            }
+            throw new Error(errorMsg);
+        }
         return response.json();
     },
 
