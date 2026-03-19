@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../src/services/api';
 import { BranchName, IncomingRegisterEntry, Client, Staff } from '../types';
 import { Search, Plus, MapPin, Eye, Edit, Trash2, ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import { ExcelImporter } from './ExcelImporter';
 
 interface IncomingRegisterManagerProps {
     selectedBranch: BranchName;
@@ -46,6 +47,65 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         }
     };
 
+    const handleImportRegisters = async (data: any[]) => {
+        let successCount = 0;
+        for (const row of data) {
+            try {
+                // Map columns to IncomingRegisterEntry
+                const entryData: Partial<IncomingRegisterEntry> = {
+                    referenceCode: row['Reference Code'] || row['referenceCode'] || '',
+                    customerName: row['Customer Name'] || row['customerName'] || '',
+                    serviceName: row['Service Name'] || row['serviceName'] || '',
+                    date: row['Date'] || row['date'] || new Date().toISOString().split('T')[0],
+                    assessmentYear: row['Assessment Year'] || row['assessmentYear'] || '',
+                    period1: row['Period 1'] || row['period1'] || '',
+                    period2: row['Period 2'] || row['period2'] || '',
+                    dueDate: row['Due Date'] || row['dueDate'] || '',
+                    completedDate: row['Completed Date'] || row['completedDate'] || '',
+                    staffName: row['Staff Name'] || row['staffName'] || '',
+                    incomingDocuments: row['Incoming Documents'] || row['incomingDocuments'] || '',
+                    verifiedBy: row['Verified By'] || row['verifiedBy'] || '',
+                    verifiedStatus: row['Verified Status'] || row['verifiedStatus'] || '',
+                    arnRefNo: row['ARN Ref No'] || row['arnRefNo'] || '',
+                    billNo: row['Bill No'] || row['billNo'] || '',
+                    billAmount: row['Bill Amount'] || row['billAmount'] || undefined,
+                    modeOfPayment: row['Mode Of Payment'] || row['modeOfPayment'] || '',
+                    paymentInfo: row['Payment Info'] || row['paymentInfo'] || '',
+                    billStatus: row['Bill Status'] || row['billStatus'] || '',
+                    purposeNarration: row['Purpose Narration'] || row['purposeNarration'] || '',
+                    status: row['Status'] || row['status'] || 'Data Received',
+                    remarks: row['Remarks'] || row['remarks'] || '',
+                    branch: (row['Branch'] || row['branch'] || selectedBranch) as BranchName,
+                };
+                
+                // If the customer doesn't exist, we could create them automatically, 
+                // but let's just use the name for the register entry.
+                if (entryData.customerName) {
+                    await api.createIncomingRegister(entryData as Omit<IncomingRegisterEntry, 'id'>);
+                    successCount++;
+                }
+
+                // If customer data is somewhat provided but client does not exist
+                const clientExists = clients.find(c => c.name.toLowerCase() === entryData.customerName?.toLowerCase());
+                if (!clientExists && entryData.customerName) {
+                    await api.createClient({
+                        name: entryData.customerName,
+                        phone: '', // Can't map from just register data normally unless provided
+                        branch: entryData.branch || selectedBranch,
+                        type: 'Individual',
+                        status: 'Active',
+                        email: '',
+                        pan: ''
+                    } as Omit<Client, 'id'>);
+                }
+            } catch (err) {
+                console.error("Failed to import register row", row, err);
+            }
+        }
+        await fetchData();
+        alert(`Successfully imported ${successCount} incoming register records!`);
+    };
+
     const filteredRegisters = registers.filter(reg => {
         const matchesBranch = selectedBranch === BranchName.ALL || reg.branch === selectedBranch;
         const matchesSearch = 
@@ -64,6 +124,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     selectedBranch={selectedBranch}
                     onAddNew={() => setViewMode('add')} 
                     isLoading={isLoading}
+                    onImport={handleImportRegisters}
                 />
             ) : (
                 <IncomingRegisterForm 
@@ -85,8 +146,9 @@ const IncomingRegisterList: React.FC<{
     setSearchTerm: (t: string) => void,
     selectedBranch: BranchName,
     onAddNew: () => void,
-    isLoading: boolean
-}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading }) => {
+    isLoading: boolean,
+    onImport: (data: any[]) => Promise<void>
+}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport }) => {
     
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -96,9 +158,16 @@ const IncomingRegisterList: React.FC<{
                         <h2 className="text-2xl font-black text-slate-800 tracking-tight">Incoming Register</h2>
                         <p className="text-slate-500 text-sm font-medium">Track all incoming documents, bills, and communications.</p>
                     </div>
-                    <button onClick={onAddNew} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95">
-                        <Plus size={18} strokeWidth={3} /> Add Incoming
-                    </button>
+                    <div className="flex gap-3">
+                        <ExcelImporter
+                            templateName="Incoming Register"
+                            requiredColumns={['Customer Name', 'Date']}
+                            onImport={onImport}
+                        />
+                        <button onClick={onAddNew} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95">
+                            <Plus size={18} strokeWidth={3} /> Add Incoming
+                        </button>
+                    </div>
                 </div>
                 <div className="flex flex-col md:flex-row gap-4 items-center">
                     <div className="relative flex-1 w-full">
@@ -211,7 +280,8 @@ const IncomingRegisterForm: React.FC<{
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        // Handle customer change function removed as not needed
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleQuickAddClient = async () => {
