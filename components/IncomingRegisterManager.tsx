@@ -72,6 +72,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     clients={clients}
                     staff={staff}
                     selectedBranch={selectedBranch === BranchName.ALL ? 'Ravulapalem' as BranchName : selectedBranch}
+                    onClientAdded={(newClient) => setClients(prev => [...prev, newClient])}
                 />
             )}
         </div>
@@ -158,8 +159,9 @@ const IncomingRegisterForm: React.FC<{
     onSuccess: () => void,
     clients: Client[],
     staff: Staff[],
-    selectedBranch: BranchName
-}> = ({ onCancel, onSuccess, clients, staff, selectedBranch }) => {
+    selectedBranch: BranchName,
+    onClientAdded: (client: Client) => void
+}> = ({ onCancel, onSuccess, clients, staff, selectedBranch, onClientAdded }) => {
     const [formData, setFormData] = useState<Partial<IncomingRegisterEntry>>({
         referenceCode: '',
         customerName: '',
@@ -188,6 +190,12 @@ const IncomingRegisterForm: React.FC<{
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Quick Add Client State
+    const [showAddClientModal, setShowAddClientModal] = useState(false);
+    const [newClientName, setNewClientName] = useState('');
+    const [newClientPhone, setNewClientPhone] = useState('');
+    const [isAddingClient, setIsAddingClient] = useState(false);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -203,8 +211,32 @@ const IncomingRegisterForm: React.FC<{
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        // Handle customer change function removed as not needed
+    };
+
+    const handleQuickAddClient = async () => {
+        if (!newClientName.trim()) return;
+        setIsAddingClient(true);
+        try {
+            const payload = {
+                name: newClientName.trim(),
+                phone: newClientPhone.trim(),
+                branch: selectedBranch,
+                type: 'Individual' as const,
+                status: 'Active' as const,
+                email: ''
+            };
+            const newClient = await api.createClient(payload as any);
+            onClientAdded(newClient);
+            setFormData(prev => ({ ...prev, customerName: newClient.name }));
+            setShowAddClientModal(false);
+            setNewClientName('');
+            setNewClientPhone('');
+        } catch (err) {
+            alert('Failed to add customer. Please try again.');
+        } finally {
+            setIsAddingClient(false);
+        }
     };
 
     return (
@@ -242,25 +274,44 @@ const IncomingRegisterForm: React.FC<{
                             <div className="space-y-4">
                                 <FormInput label="Reference Code" name="referenceCode" value={formData.referenceCode} onChange={handleChange} placeholder="Reference Code" />
                                 
-                                <div className="space-y-1.5">
-                                    <label className="text-xs font-bold text-slate-700">Customer Name</label>
-                                    <select name="customerName" value={formData.customerName} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
-                                        <option value="">Please select customer</option>
-                                        {clients.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                    </select>
-                                </div>
-
+                                <SearchableCustomerSelect
+                                    clients={clients}
+                                    value={formData.customerName || ''}
+                                    onChange={(name) => setFormData(prev => ({ ...prev, customerName: name }))}
+                                    onAddNew={(name) => {
+                                        setNewClientName(name);
+                                        setShowAddClientModal(true);
+                                    }}
+                                />
                                 <div className="space-y-1.5">
                                     <label className="text-xs font-bold text-slate-700">Service Name</label>
-                                    <select name="serviceName" value={formData.serviceName} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
-                                        <option value="">Please select Service</option>
-                                        <option value="GST Registration">GST Registration</option>
-                                        <option value="GST Filing">GST Filing</option>
-                                        <option value="Income Tax Return">Income Tax Return</option>
-                                        <option value="TDS Filing">TDS Filing</option>
-                                        <option value="Company Incorporation">Company Incorporation</option>
-                                        <option value="Accounting">Accounting</option>
-                                    </select>
+                                    <input 
+                                        type="text" 
+                                        list="services-list"
+                                        name="serviceName" 
+                                        value={formData.serviceName} 
+                                        onChange={handleChange} 
+                                        placeholder="Type or select a service"
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                    />
+                                    <datalist id="services-list">
+                                        <option value="GST Registration" />
+                                        <option value="GSTR-1 Filing" />
+                                        <option value="GSTR-3B Filing" />
+                                        <option value="Income Tax Return (ITR-1)" />
+                                        <option value="Income Tax Return (ITR-4)" />
+                                        <option value="TDS Return" />
+                                        <option value="Tax Audit" />
+                                        <option value="ROC / Company Law" />
+                                        <option value="Accounting & Bookkeeping" />
+                                        <option value="Food licence (FSSAI)" />
+                                        <option value="MSME Registration" />
+                                        <option value="Labour License" />
+                                        <option value="Project Report" />
+                                        <option value="Projections" />
+                                        <option value="PF AND ESI" />
+                                        <option value="Other Services" />
+                                    </datalist>
                                 </div>
 
                                 <FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} />
@@ -388,6 +439,132 @@ const IncomingRegisterForm: React.FC<{
                     </div>
                 </div>
             </div>
+
+            {/* Quick Add Client Modal */}
+            {showAddClientModal && (
+                <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                            <h3 className="text-lg font-black text-slate-800 tracking-tight">Quick Add Customer</h3>
+                            <button onClick={() => setShowAddClientModal(false)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors">
+                                <Search className="rotate-45" size={16} /> {/* Making an X with Search by rotating or just using a distinct component if X wasn't imported. Actually let's use + rotated */}
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-700">Customer Name *</label>
+                                <input 
+                                    type="text" 
+                                    value={newClientName} 
+                                    onChange={e => setNewClientName(e.target.value)} 
+                                    placeholder="Enter full name"
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            </div>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-bold text-slate-700">Phone Number</label>
+                                <input 
+                                    type="text" 
+                                    value={newClientPhone} 
+                                    onChange={e => setNewClientPhone(e.target.value)} 
+                                    placeholder="Enter phone number"
+                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                            <button onClick={() => setShowAddClientModal(false)} className="px-6 py-2.5 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-200 transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={handleQuickAddClient} disabled={!newClientName.trim() || isAddingClient} className="px-6 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-50 disabled:shadow-none flex items-center gap-2">
+                                {isAddingClient ? 'Saving...' : 'Save Customer'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const SearchableCustomerSelect = ({ 
+    clients, 
+    value, 
+    onChange, 
+    onAddNew 
+}: { 
+    clients: Client[], 
+    value: string, 
+    onChange: (name: string) => void, 
+    onAddNew: (search: string) => void 
+}) => {
+    const [search, setSearch] = useState(value || '');
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+        setSearch(value || '');
+    }, [value]);
+
+    React.useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredClients = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+    return (
+        <div className="space-y-1.5 relative" ref={wrapperRef}>
+            <label className="text-xs font-bold text-slate-700">Customer Name</label>
+            <input 
+                type="text"
+                placeholder="Search or Type to Select"
+                value={search}
+                onChange={(e) => {
+                    setSearch(e.target.value);
+                    setIsOpen(true);
+                    onChange(e.target.value); // Set form data directly
+                }}
+                onFocus={() => setIsOpen(true)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+            {isOpen && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto w-full">
+                    <div 
+                        className="px-4 py-3 text-sm font-bold text-indigo-600 hover:bg-indigo-50 cursor-pointer border-b border-slate-100 flex items-center gap-2 sticky top-0 bg-white"
+                        onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent input blur
+                            onAddNew(search);
+                            setIsOpen(false);
+                        }}
+                    >
+                        <Plus size={16} /> Add New Customer: <span className="text-slate-700 ml-1">{search || '...'}</span>
+                    </div>
+                    {filteredClients.length > 0 ? (
+                        filteredClients.map(c => (
+                            <div 
+                                key={c.id} 
+                                className="px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent input blur before onClick fires
+                                    onChange(c.name);
+                                    setSearch(c.name);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                {c.name}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-4 py-3 text-sm text-slate-500 italic">No existing customer found.</div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
