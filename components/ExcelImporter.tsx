@@ -27,14 +27,14 @@ export const ExcelImporter: React.FC<ExcelImporterProps> = ({ onImport, template
         const reader = new FileReader();
         reader.onload = async (evt) => {
             try {
-                const bstr = evt.target?.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
+                const buffer = evt.target?.result;
+                const wb = XLSX.read(buffer, { type: 'array' });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws);
 
-                if (data.length === 0) {
-                    setError('The file appears to be empty.');
+                if (!data || data.length === 0) {
+                    setError('The file appears to be empty or the first sheet has no data. Please check your Excel file.');
                     return;
                 }
 
@@ -63,7 +63,7 @@ export const ExcelImporter: React.FC<ExcelImporterProps> = ({ onImport, template
                 setImporting(false);
             }
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(file);
     };
 
     if (!isOpen) {
