@@ -64,7 +64,7 @@ switch ($method) {
             // Format dates from Excel numeric values if needed or fallback to today
             $date = $input['date'] ?? null;
             if (is_numeric($date)) {
-                $date = gmdate("Y-m-d", ($date - 25569) * 86400); 
+                $date = gmdate("Y-m-d", (int)(($date - 25569) * 86400)); 
             } elseif (empty($date)) {
                 $date = date('Y-m-d');
             } else {
