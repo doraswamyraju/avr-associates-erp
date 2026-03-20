@@ -20,6 +20,11 @@ export const ExcelImporter: React.FC<ExcelImporterProps> = ({ onImport, template
         const file = e.target.files?.[0];
         if (!file) return;
 
+        if (file.size === 0) {
+            setError('The selected file is 0 bytes and completely empty. Please save your Excel file and try again.');
+            return;
+        }
+
         setFileName(file.name);
         setError(null);
         setStats(null);
@@ -29,9 +34,15 @@ export const ExcelImporter: React.FC<ExcelImporterProps> = ({ onImport, template
             try {
                 const buffer = evt.target?.result;
                 const wb = XLSX.read(buffer, { type: 'array' });
-                const wsname = wb.SheetNames[0];
-                const ws = wb.Sheets[wsname];
-                const data = XLSX.utils.sheet_to_json(ws);
+                let data: any[] = [];
+                for (const sheetName of wb.SheetNames) {
+                    const ws = wb.Sheets[sheetName];
+                    const sheetData = XLSX.utils.sheet_to_json(ws);
+                    if (sheetData && sheetData.length > 0) {
+                        data = sheetData;
+                        break;
+                    }
+                }
 
                 if (!data || data.length === 0) {
                     setError('The file appears to be empty or the first sheet has no data. Please check your Excel file.');
