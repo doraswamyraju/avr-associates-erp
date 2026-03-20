@@ -69,22 +69,28 @@ switch ($method) {
         
         $stmt = $pdo->prepare($sql);
         
-        // Generate ID if not provided or empty string
+        // Generate robust unique ID instead of simple random to prevent collisions
         if (empty($data['id'])) {
-            $data['id'] = 'C' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $data['id'] = 'C' . substr(uniqid(), -6) . mt_rand(10, 99);
         }
 
         try {
             $pdo->beginTransaction();
+            
+            // Truncate strings to prevent SQL truncation errors during mass import
+            $safePhone = isset($data['phone']) ? substr((string)$data['phone'], 0, 20) : null;
+            $safeEmail = isset($data['email']) ? substr((string)$data['email'], 0, 100) : null;
+            $safeName = isset($data['name']) ? substr((string)$data['name'], 0, 100) : '';
+
             $stmt->execute([
                 ':id' => $data['id'],
-                ':name' => $data['name'],
+                ':name' => $safeName,
                 ':pan' => $data['pan'] ?? null,
                 ':gstin' => $data['gstin'] ?? null,
                 ':type' => $data['type'] ?? 'Individual',
                 ':branch' => $data['branch'] ?? 'Ravulapalem',
-                ':phone' => $data['phone'] ?? null,
-                ':email' => $data['email'] ?? null,
+                ':phone' => $safePhone,
+                ':email' => $safeEmail,
                 ':status' => $data['status'] ?? 'Active',
                 ':group_name' => $data['group'] ?? null,
                 ':trade_name' => $data['tradeName'] ?? null,
@@ -102,13 +108,13 @@ switch ($method) {
             ]);
 
             // Create system user for the client
-            $email = $data['email'] ?? null;
-            if ($email) {
+            if ($safeEmail) {
                 $resetToken = bin2hex(random_bytes(32));
                 $tokenExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
                 
                 // Username can be email or generated from name
-                $username = strtolower(str_replace(' ', '.', $data['name'])) . mt_rand(10, 99);
+                $username = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $safeName)) . mt_rand(100, 999);
+                $username = substr($username, 0, 20); // truncate username in case name was very long
                 $tempPassword = bin2hex(random_bytes(8));
                 $passwordHash = password_hash($tempPassword, PASSWORD_DEFAULT);
 
@@ -120,16 +126,16 @@ switch ($method) {
                     ':id' => 'U-' . $data['id'], // Prefix client ID for user table uniqueness
                     ':username' => $username,
                     ':password_hash' => $passwordHash,
-                    ':name' => $data['name'],
+                    ':name' => $safeName,
                     ':avatar' => null,
                     ':branch' => $data['branch'] ?? 'Ravulapalem',
                     ':client_id' => $data['id'],
-                    ':email' => $email,
+                    ':email' => $safeEmail,
                     ':reset_token' => $resetToken,
                     ':token_expiry' => $tokenExpiry
                 ]);
 
-                send_welcome_email($email, $data['name'], $username, $resetToken);
+                send_welcome_email($safeEmail, $safeName, $username, $resetToken);
             }
 
             $pdo->commit();

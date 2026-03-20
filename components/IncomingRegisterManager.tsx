@@ -53,22 +53,22 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
             try {
                 // Map columns to IncomingRegisterEntry
                 const entryData: Partial<IncomingRegisterEntry> = {
-                    referenceCode: row['Reference Code'] || row['referenceCode'] || '',
-                    customerName: row['Customer Name'] || row['customerName'] || '',
+                    referenceCode: row['Reference Code'] || row['referenceCode'] || row['Ref.Code'] || '',
+                    customerName: row['Customer Name'] || row['customerName'] || row['Client Name'] || '',
                     serviceName: row['Service Name'] || row['serviceName'] || '',
-                    date: row['Date'] || row['date'] || new Date().toISOString().split('T')[0],
+                    date: row['Date'] || row['date'] || row['Entery Date'] || row['Entry Date'] || new Date().toISOString().split('T')[0],
                     assessmentYear: row['Assessment Year'] || row['assessmentYear'] || '',
                     period1: row['Period 1'] || row['period1'] || '',
                     period2: row['Period 2'] || row['period2'] || '',
                     dueDate: row['Due Date'] || row['dueDate'] || '',
                     completedDate: row['Completed Date'] || row['completedDate'] || '',
                     staffName: row['Staff Name'] || row['staffName'] || '',
-                    incomingDocuments: row['Incoming Documents'] || row['incomingDocuments'] || '',
+                    incomingDocuments: row['Incoming Documents'] || row['incomingDocuments'] || row['Documents'] || '',
                     verifiedBy: row['Verified By'] || row['verifiedBy'] || '',
                     verifiedStatus: row['Verified Status'] || row['verifiedStatus'] || '',
                     arnRefNo: row['ARN Ref No'] || row['arnRefNo'] || '',
                     billNo: row['Bill No'] || row['billNo'] || '',
-                    billAmount: row['Bill Amount'] || row['billAmount'] || undefined,
+                    billAmount: row['Bill Amount'] || row['billAmount'] || row['Bill Amt'] || undefined,
                     modeOfPayment: row['Mode Of Payment'] || row['modeOfPayment'] || '',
                     paymentInfo: row['Payment Info'] || row['paymentInfo'] || '',
                     billStatus: row['Bill Status'] || row['billStatus'] || '',
@@ -88,15 +88,19 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                 // If customer data is somewhat provided but client does not exist
                 const clientExists = clients.find(c => c.name.toLowerCase() === entryData.customerName?.toLowerCase());
                 if (!clientExists && entryData.customerName) {
-                    await api.createClient({
+                    const newClient = await api.createClient({
                         name: entryData.customerName,
-                        phone: '', // Can't map from just register data normally unless provided
+                        phone: row['Mobile Number'] || row['phone'] || row['Phone'] || '', 
                         branch: entryData.branch || selectedBranch,
                         type: 'Individual',
                         status: 'Active',
                         email: '',
                         pan: ''
                     } as Omit<Client, 'id'>);
+                    
+                    if (newClient) {
+                        clients.push(newClient); // Fix: Add to local array to prevent duplicate IDs on next loop iter
+                    }
                 }
             } catch (err) {
                 console.error("Failed to import register row", row, err);
@@ -161,7 +165,7 @@ const IncomingRegisterList: React.FC<{
                     <div className="flex gap-3">
                         <ExcelImporter
                             templateName="Incoming Register"
-                            requiredColumns={['Customer Name', 'Date']}
+                            requiredColumns={[]}
                             onImport={onImport}
                         />
                         <button onClick={onAddNew} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95">
