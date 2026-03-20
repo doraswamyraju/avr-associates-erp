@@ -107,10 +107,13 @@ switch ($method) {
                 ':branch' => isset($input['branch']) ? substr((string)$input['branch'], 0, 100) : 'All Branches'
             ]);
             echo json_encode(['message' => 'Entry created', 'id' => $input['id']]);
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
             http_response_code(500);
             $msg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8');
-            echo json_encode(['error' => $msg]);
+            echo json_encode([
+                'error' => 'Row Failed (Constraint or Format Error)',
+                'details' => $msg
+            ], JSON_INVALID_UTF8_SUBSTITUTE);
         }
         break;
 }

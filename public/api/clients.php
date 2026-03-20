@@ -140,10 +140,14 @@ switch ($method) {
 
             $pdo->commit();
             echo json_encode(['message' => 'Client created and user account initialized', 'id' => $data['id']]);
-        } catch (PDOException $e) {
+        } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            $msg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8');
+            echo json_encode([
+                'error' => 'Client Creation Failed',
+                'details' => $msg
+            ], JSON_INVALID_UTF8_SUBSTITUTE);
         }
         break;
 

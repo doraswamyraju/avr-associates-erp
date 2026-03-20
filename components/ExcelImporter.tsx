@@ -39,13 +39,26 @@ export const ExcelImporter: React.FC<ExcelImporterProps> = ({ onImport, template
                     const ws = wb.Sheets[sheetName];
                     const sheetData = XLSX.utils.sheet_to_json(ws);
                     if (sheetData && sheetData.length > 0) {
-                        data = sheetData;
-                        break;
+                        // Look for recognizable headers to confirm it's a data sheet
+                        const firstRow = sheetData[0] as object;
+                        const keys = Object.keys(firstRow).map(k => k.toLowerCase());
+                        const hasName = keys.some(k => k.includes('client') || k.includes('customer') || k.includes('name'));
+                        
+                        // Always grab first sheet with data as fallback
+                        if (data.length === 0) {
+                            data = sheetData;
+                        }
+                        
+                        // If we aggressively matched a real data sheet, use it and break
+                        if (hasName) {
+                            data = sheetData;
+                            break;
+                        }
                     }
                 }
 
                 if (!data || data.length === 0) {
-                    setError('The file appears to be empty or the first sheet has no data. Please check your Excel file.');
+                    setError('The file appears to be empty or has no readable columns. Please check your Excel file.');
                     return;
                 }
 
