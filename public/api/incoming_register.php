@@ -89,27 +89,28 @@ switch ($method) {
                 ':assessment_year' => isset($input['assessmentYear']) ? substr((string)$input['assessmentYear'], 0, 20) : null,
                 ':period_1' => isset($input['period1']) ? substr((string)$input['period1'], 0, 50) : null,
                 ':period_2' => isset($input['period2']) ? substr((string)$input['period2'], 0, 50) : null,
-                ':due_date' => !empty($input['dueDate']) ? $input['dueDate'] : null,
-                ':completed_date' => !empty($input['completedDate']) ? $input['completedDate'] : null,
+                ':due_date' => (!empty($input['dueDate']) && (strtotime($input['dueDate']) || is_numeric($input['dueDate']))) ? (is_numeric($input['dueDate']) ? gmdate("Y-m-d", (int)(($input['dueDate'] - 25569) * 86400)) : date('Y-m-d', strtotime($input['dueDate']))) : null,
+                ':completed_date' => (!empty($input['completedDate']) && (strtotime($input['completedDate']) || is_numeric($input['completedDate']))) ? (is_numeric($input['completedDate']) ? gmdate("Y-m-d", (int)(($input['completedDate'] - 25569) * 86400)) : date('Y-m-d', strtotime($input['completedDate']))) : null,
                 ':staff_name' => isset($input['staffName']) ? substr((string)$input['staffName'], 0, 100) : null,
-                ':incoming_documents' => $input['incomingDocuments'] ?? null,
+                ':incoming_documents' => isset($input['incomingDocuments']) ? substr((string)$input['incomingDocuments'], 0, 1000) : null,
                 ':verified_by' => isset($input['verifiedBy']) ? substr((string)$input['verifiedBy'], 0, 100) : null,
                 ':verified_status' => isset($input['verifiedStatus']) ? substr((string)$input['verifiedStatus'], 0, 50) : null,
                 ':arn_ref_no' => isset($input['arnRefNo']) ? substr((string)$input['arnRefNo'], 0, 100) : null,
                 ':bill_no' => isset($input['billNo']) ? substr((string)$input['billNo'], 0, 50) : null,
                 ':bill_amount' => $billAmt,
                 ':mode_of_payment' => isset($input['modeOfPayment']) ? substr((string)$input['modeOfPayment'], 0, 50) : null,
-                ':payment_info' => $input['paymentInfo'] ?? null,
+                ':payment_info' => isset($input['paymentInfo']) ? substr((string)$input['paymentInfo'], 0, 500) : null,
                 ':bill_status' => isset($input['billStatus']) ? substr((string)$input['billStatus'], 0, 50) : null,
-                ':purpose_narration' => $input['purposeNarration'] ?? null,
+                ':purpose_narration' => isset($input['purposeNarration']) ? substr((string)$input['purposeNarration'], 0, 500) : null,
                 ':status' => isset($input['status']) ? substr((string)$input['status'], 0, 50) : 'Data Pending',
-                ':remarks' => $input['remarks'] ?? null,
+                ':remarks' => isset($input['remarks']) ? substr((string)$input['remarks'], 0, 1000) : null,
                 ':branch' => isset($input['branch']) ? substr((string)$input['branch'], 0, 100) : 'All Branches'
             ]);
             echo json_encode(['message' => 'Entry created', 'id' => $input['id']]);
         } catch (PDOException $e) {
             http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            $msg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8');
+            echo json_encode(['error' => $msg]);
         }
         break;
 }
