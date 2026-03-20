@@ -42,8 +42,8 @@ switch ($method) {
 
     case 'POST':
         $input = json_decode(file_get_contents('php://input'), true);
-        if (!isset($input['id'])) {
-            $input['id'] = 'INC-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        if (empty($input['id'])) {
+            $input['id'] = 'INC-' . substr(uniqid(), -6) . mt_rand(10, 99);
         }
 
         $sql = "INSERT INTO incoming_register (
@@ -60,31 +60,51 @@ switch ($method) {
         
         $stmt = $pdo->prepare($sql);
         try {
+            
+            // Format dates from Excel numeric values if needed or fallback to today
+            $date = $input['date'] ?? null;
+            if (is_numeric($date)) {
+                $date = gmdate("Y-m-d", ($date - 25569) * 86400); 
+            } elseif (empty($date)) {
+                $date = date('Y-m-d');
+            } else {
+                // If it's a string like '01-01-2026', just pass it, MySQL usually parses it or we can strtotime
+                $timestamp = strtotime((string)$date);
+                $date = $timestamp ? date('Y-m-d', $timestamp) : date('Y-m-d');
+            }
+            
+            // Safely truncate strings and handle empty number fields
+            $safeRefCode = isset($input['referenceCode']) ? substr((string)$input['referenceCode'], 0, 50) : null;
+            $safeCustomer = isset($input['customerName']) ? substr((string)$input['customerName'], 0, 100) : null;
+            $safePhone = isset($input['phone']) ? substr((string)$input['phone'], 0, 20) : null;
+            
+            $billAmt = isset($input['billAmount']) && $input['billAmount'] !== '' ? (float)$input['billAmount'] : null;
+
             $stmt->execute([
                 ':id' => $input['id'],
-                ':reference_code' => $input['referenceCode'] ?? null,
-                ':customer_name' => $input['customerName'] ?? null,
-                ':service_name' => $input['serviceName'] ?? null,
-                ':date' => $input['date'] ?? date('Y-m-d'),
-                ':assessment_year' => $input['assessmentYear'] ?? null,
-                ':period_1' => $input['period1'] ?? null,
-                ':period_2' => $input['period2'] ?? null,
-                ':due_date' => $input['dueDate'] ?? null,
-                ':completed_date' => $input['completedDate'] ?? null,
-                ':staff_name' => $input['staffName'] ?? null,
+                ':reference_code' => $safeRefCode,
+                ':customer_name' => $safeCustomer,
+                ':service_name' => isset($input['serviceName']) ? substr((string)$input['serviceName'], 0, 100) : null,
+                ':date' => $date,
+                ':assessment_year' => isset($input['assessmentYear']) ? substr((string)$input['assessmentYear'], 0, 20) : null,
+                ':period_1' => isset($input['period1']) ? substr((string)$input['period1'], 0, 50) : null,
+                ':period_2' => isset($input['period2']) ? substr((string)$input['period2'], 0, 50) : null,
+                ':due_date' => !empty($input['dueDate']) ? $input['dueDate'] : null,
+                ':completed_date' => !empty($input['completedDate']) ? $input['completedDate'] : null,
+                ':staff_name' => isset($input['staffName']) ? substr((string)$input['staffName'], 0, 100) : null,
                 ':incoming_documents' => $input['incomingDocuments'] ?? null,
-                ':verified_by' => $input['verifiedBy'] ?? null,
-                ':verified_status' => $input['verifiedStatus'] ?? null,
-                ':arn_ref_no' => $input['arnRefNo'] ?? null,
-                ':bill_no' => $input['billNo'] ?? null,
-                ':bill_amount' => $input['billAmount'] ?? null,
-                ':mode_of_payment' => $input['modeOfPayment'] ?? null,
+                ':verified_by' => isset($input['verifiedBy']) ? substr((string)$input['verifiedBy'], 0, 100) : null,
+                ':verified_status' => isset($input['verifiedStatus']) ? substr((string)$input['verifiedStatus'], 0, 50) : null,
+                ':arn_ref_no' => isset($input['arnRefNo']) ? substr((string)$input['arnRefNo'], 0, 100) : null,
+                ':bill_no' => isset($input['billNo']) ? substr((string)$input['billNo'], 0, 50) : null,
+                ':bill_amount' => $billAmt,
+                ':mode_of_payment' => isset($input['modeOfPayment']) ? substr((string)$input['modeOfPayment'], 0, 50) : null,
                 ':payment_info' => $input['paymentInfo'] ?? null,
-                ':bill_status' => $input['billStatus'] ?? null,
+                ':bill_status' => isset($input['billStatus']) ? substr((string)$input['billStatus'], 0, 50) : null,
                 ':purpose_narration' => $input['purposeNarration'] ?? null,
-                ':status' => $input['status'] ?? 'Data Pending',
+                ':status' => isset($input['status']) ? substr((string)$input['status'], 0, 50) : 'Data Pending',
                 ':remarks' => $input['remarks'] ?? null,
-                ':branch' => $input['branch'] ?? 'All Branches'
+                ':branch' => isset($input['branch']) ? substr((string)$input['branch'], 0, 100) : 'All Branches'
             ]);
             echo json_encode(['message' => 'Entry created', 'id' => $input['id']]);
         } catch (PDOException $e) {
