@@ -27,8 +27,8 @@ switch ($method) {
                 ifsc_code = :ifsc_code, refer_by = :refer_by, service_details = :service_details
                 WHERE id = :id";
         
-        $stmt = $pdo->prepare($sql);
         try {
+            $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 ':id' => $data['id'],
                 ':name' => $data['name'],
@@ -67,8 +67,6 @@ switch ($method) {
         $sql = "INSERT INTO clients (id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by, service_details) 
                 VALUES (:id, :name, :pan, :gstin, :type, :branch, :phone, :email, :status, :group_name, :trade_name, :dob, :address, :city, :pincode, :state, :file_number, :bank_account_no, :bank_name, :ifsc_code, :refer_by, :service_details)";
         
-        $stmt = $pdo->prepare($sql);
-        
         // Generate robust unique ID instead of simple random to prevent collisions
         if (empty($data['id'])) {
             $data['id'] = 'C' . substr(uniqid(), -6) . mt_rand(10, 99);
@@ -76,6 +74,7 @@ switch ($method) {
 
         try {
             $pdo->beginTransaction();
+            $stmt = $pdo->prepare($sql);
             
             // Truncate strings to prevent SQL truncation errors during mass import
             $safePhone = isset($data['phone']) ? substr((string)$data['phone'], 0, 20) : null;
