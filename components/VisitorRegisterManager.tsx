@@ -15,12 +15,12 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
     const [editingEntry, setEditingEntry] = useState<VisitorRegisterEntry | null>(null);
     const [visitors, setVisitors] = useState<VisitorRegisterEntry[]>([]);
     const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(1);
     const LIMIT = 20;
+    const [offset, setOffset] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const isLoadingRef = React.useRef(false);
     const [detailEntry, setDetailEntry] = useState<VisitorRegisterEntry | null>(null);
 
     // Debounce search
@@ -29,28 +29,23 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
         return () => clearTimeout(t);
     }, [searchTerm]);
 
-    const prevFilters = React.useRef({ debouncedSearch, selectedBranch });
-
+    // When filters change: clear list and reset offset
     useEffect(() => {
-        let isAborted = false;
+        setVisitors([]);
+        setOffset(0);
+    }, [debouncedSearch, selectedBranch]);
 
-        const filtersChanged =
-            prevFilters.current.debouncedSearch !== debouncedSearch ||
-            prevFilters.current.selectedBranch !== selectedBranch;
-
-        prevFilters.current = { debouncedSearch, selectedBranch };
-
-        const currentPage = filtersChanged ? 1 : page;
-        if (filtersChanged) setPage(1);
-
+    // Load data whenever offset, search or branch changes
+    useEffect(() => {
+        let cancelled = false;
         const load = async () => {
+            if (isLoadingRef.current) return;
+            isLoadingRef.current = true;
             setIsLoading(true);
             try {
-                const offset = (currentPage - 1) * LIMIT;
                 const result = await api.getVisitorRegister(LIMIT, offset, debouncedSearch, selectedBranch);
-                if (isAborted) return;
-
-                if (filtersChanged || currentPage === 1) {
+                if (cancelled) return;
+                if (offset === 0) {
                     setVisitors(result.data || []);
                 } else {
                     setVisitors(prev => [...prev, ...(result.data || [])]);
@@ -59,16 +54,17 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
             } catch (e) {
                 console.error('Failed to load visitors', e);
             } finally {
-                if (!isAborted) setIsLoading(false);
+                isLoadingRef.current = false;
+                if (!cancelled) setIsLoading(false);
             }
         };
-
         load();
-        return () => { isAborted = true; };
-    }, [page, debouncedSearch, selectedBranch, refreshKey]);
+        return () => { cancelled = true; };
+    }, [offset, debouncedSearch, selectedBranch]);
 
-    const fetchData = async () => {
-        setRefreshKey(prev => prev + 1);
+    const fetchData = () => {
+        setVisitors([]);
+        setOffset(0);
     };
 
     // Quick action
@@ -82,8 +78,8 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-        if (scrollHeight - scrollTop <= clientHeight + 60 && !isLoading && visitors.length < total) {
-            setPage(p => p + 1);
+        if (scrollHeight - scrollTop <= clientHeight + 100 && !isLoadingRef.current && visitors.length < total) {
+            setOffset(prev => prev + LIMIT);
         }
     };
 
@@ -114,7 +110,6 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
         try {
             const res = await api.createVisitorBatch(mapped);
             alert(`✅ Imported ${res.count} visitor record(s)!`);
-            setPage(1);
             fetchData();
         } catch (e: any) { alert('Import failed: ' + e.message); }
     };
@@ -125,7 +120,7 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
                 initialData={editingEntry || undefined}
                 selectedBranch={selectedBranch}
                 onCancel={() => { setEditingEntry(null); setViewMode('list'); }}
-                onSuccess={() => { setEditingEntry(null); setViewMode('list'); setPage(1); fetchData(); }}
+                onSuccess={() => { setEditingEntry(null); setViewMode('list'); fetchData(); }}
             />
         );
     }
@@ -209,7 +204,7 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
                                 </tr>
                             ) : visitors.map((v, i) => (
                                 <tr key={v.id} className="hover:bg-indigo-50/30 transition-colors cursor-pointer" onClick={() => setDetailEntry(v)}>
-                                    <td className="px-4 py-2.5 text-slate-400 border-r border-slate-100">{(page - 1) * LIMIT + i + 1}</td>
+                                    <td className="px-4 py-2.5 text-slate-400 border-r border-slate-100">{i + 1}</td>
                                     <td className="px-4 py-2.5 font-semibold text-slate-800 border-r border-slate-100 uppercase max-w-[180px] truncate" title={v.visitorName}>{v.visitorName}</td>
                                     <td className="px-4 py-2.5 text-slate-600 border-r border-slate-100 max-w-[160px] truncate" title={v.address}>{v.address || '-'}</td>
                                     <td className="px-4 py-2.5 text-slate-600 border-r border-slate-100 whitespace-nowrap">{v.phone || '-'}</td>

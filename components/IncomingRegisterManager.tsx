@@ -19,66 +19,59 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     const [stats, setStats] = useState({ dataReceived: 0, wip: 0, completed: 0 });
     const [clients, setClients] = useState<Client[]>([]);
     const [staff, setStaff] = useState<Staff[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(10);
-    const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const LIMIT = 20;
+    const [offset, setOffset] = useState(0);
+    const isLoadingRef = React.useRef(false);
 
+    // Debounce search
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    const prevFilters = React.useRef({ debouncedSearch, selectedBranch, limit });
-
+    // When filters change reset list and offset
     useEffect(() => {
-        let isAborted = false;
+        setRegisters([]);
+        setOffset(0);
+    }, [debouncedSearch, selectedBranch]);
 
-        const filtersChanged =
-            prevFilters.current.debouncedSearch !== debouncedSearch ||
-            prevFilters.current.selectedBranch !== selectedBranch ||
-            prevFilters.current.limit !== limit;
-
-        prevFilters.current = { debouncedSearch, selectedBranch, limit };
-
-        const currentPage = filtersChanged ? 1 : page;
-        if (filtersChanged) setPage(1);
-
+    // Load data whenever offset, search or branch changes
+    useEffect(() => {
+        let cancelled = false;
         const load = async () => {
+            if (isLoadingRef.current) return;
+            isLoadingRef.current = true;
             setIsLoading(true);
             try {
-                const offset = (currentPage - 1) * limit;
                 const [regResponse, statsData] = await Promise.all([
-                    api.getIncomingRegister(limit, offset, debouncedSearch, selectedBranch),
+                    api.getIncomingRegister(LIMIT, offset, debouncedSearch, selectedBranch),
                     api.getIncomingRegisterStats(selectedBranch)
                 ]);
-
-                if (isAborted) return;
-
-                if (filtersChanged || currentPage === 1) {
+                if (cancelled) return;
+                if (offset === 0) {
                     setRegisters(regResponse.data || []);
                 } else {
                     setRegisters(prev => [...prev, ...(regResponse.data || [])]);
                 }
-
                 setTotalRegisters(regResponse.total || 0);
                 setStats({
                     dataReceived: statsData['Data Received'] || 0,
                     wip: statsData['Work In Progress'] || 0,
                     completed: statsData['Completed'] || 0
                 });
-            } catch (error) {
-                console.error('Failed to fetch data:', error);
+            } catch (err) {
+                console.error('Failed to fetch data:', err);
             } finally {
-                if (!isAborted) setIsLoading(false);
+                isLoadingRef.current = false;
+                if (!cancelled) setIsLoading(false);
             }
         };
-
         load();
-        return () => { isAborted = true; };
-    }, [page, limit, debouncedSearch, selectedBranch, refreshKey]);
+        return () => { cancelled = true; };
+    }, [offset, debouncedSearch, selectedBranch]);
 
     useEffect(() => { fetchDropdownData(); }, []);
 
@@ -101,7 +94,8 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     };
 
     const fetchData = async () => {
-        setRefreshKey(prev => prev + 1);
+        setRegisters([]);
+        setOffset(0);
     };
 
     const handleImportRegisters = async (data: any[]) => {
@@ -194,9 +188,9 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     isLoading={isLoading}
                     onImport={handleImportRegisters}
                     totalRegisters={totalRegisters}
-                    page={page}
-                    setPage={setPage}
-                    limit={limit}
+                    loaded={registers.length}
+                    onLoadMore={() => setOffset(prev => prev + LIMIT)}
+                    canLoadMore={registers.length < totalRegisters && !isLoading}
                     stats={stats}
                     onEdit={(reg) => { setEditingRegister(reg); setViewMode('edit'); }}
                     onDelete={handleDelete}
@@ -204,7 +198,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
             ) : (
                 <IncomingRegisterForm 
                     onCancel={() => setViewMode('list')} 
-                    onSuccess={() => { setViewMode('list'); setPage(1); fetchData(); }}
+                    onSuccess={() => { setViewMode('list'); fetchData(); }}
                     clients={clients}
                     staff={staff}
                     selectedBranch={selectedBranch === BranchName.ALL ? 'Ravulapalem' as BranchName : selectedBranch}
@@ -226,20 +220,18 @@ const IncomingRegisterList: React.FC<{
     isLoading: boolean,
     onImport: (data: any[]) => Promise<void>,
     totalRegisters: number,
-    page: number,
-    setPage: React.Dispatch<React.SetStateAction<number>>,
-    limit: number,
+    loaded: number,
+    onLoadMore: () => void,
+    canLoadMore: boolean,
     stats: { dataReceived: number, wip: number, completed: number },
     onEdit: (reg: IncomingRegisterEntry) => void,
     onDelete: (id: string) => void,
-}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, page, setPage, limit, stats, onEdit, onDelete }) => {
+}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, loaded, onLoadMore, canLoadMore, stats, onEdit, onDelete }) => {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
-        if (scrollHeight - scrollTop <= clientHeight + 50) {
-            if (!isLoading && registers.length < totalRegisters) {
-                setPage(p => p + 1);
-            }
+        if (scrollHeight - scrollTop <= clientHeight + 100 && canLoadMore) {
+            onLoadMore();
         }
     };
 
