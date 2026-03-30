@@ -37,10 +37,6 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [page, limit, debouncedSearch, selectedBranch]);
-
-    useEffect(() => {
         if (quickAction === 'NEW_INCOMING') {
             setViewMode('add');
             if (onQuickActionHandled) onQuickActionHandled();

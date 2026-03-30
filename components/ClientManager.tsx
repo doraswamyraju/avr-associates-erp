@@ -683,6 +683,7 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
     const [tasks, setTasks] = useState<Task[]>([]);
     const [incomingRegisters, setIncomingRegisters] = useState<IncomingRegisterEntry[]>([]);
     const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'profile'>('overview');
+    const [selectedRegister, setSelectedRegister] = useState<IncomingRegisterEntry | null>(null);
 
     useEffect(() => {
         const fetchRelated = async () => {
@@ -800,7 +801,7 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {incomingRegisters.map(reg => (
-                                                <tr key={reg.id} className="hover:bg-indigo-50/30 transition-colors">
+                                                <tr key={reg.id} onClick={() => setSelectedRegister(reg)} className="hover:bg-indigo-50/30 transition-colors cursor-pointer group">
                                                     <td className="px-8 py-6 font-bold text-slate-800">
                                                         <div className="flex flex-col">
                                                             <span>{reg.serviceName || 'General Service'}</span>
@@ -865,6 +866,74 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
                                     <p className="text-slate-400 font-bold">No workflow tasks pending.</p>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {selectedRegister && (
+                        <div className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setSelectedRegister(null)}>
+                            <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+                                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-800 tracking-tight">{selectedRegister.serviceName || 'General Service'}</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedRegister.referenceCode || selectedRegister.id} • {selectedRegister.date}</p>
+                                    </div>
+                                    <button onClick={() => setSelectedRegister(null)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors">✕</button>
+                                </div>
+                                <div className="max-h-[70vh] overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Status</p>
+                                                <span className={`text-xs font-black uppercase px-3 py-1.5 rounded-xl block w-fit ${
+                                                    selectedRegister.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
+                                                    selectedRegister.status === 'Work In Progress' ? 'bg-amber-50 text-amber-600' :
+                                                    'bg-slate-100 text-slate-600'
+                                                }`}>{selectedRegister.status}</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Period Details</p>
+                                                <p className="font-mono text-sm font-bold text-slate-800">{selectedRegister.period1 || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Assessment Year</p>
+                                                <p className="text-sm font-bold text-slate-800">{selectedRegister.assessmentYear || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Billing Details</p>
+                                                <p className="text-lg font-black text-slate-800">₹{selectedRegister.billAmount?.toLocaleString() || '0'}</p>
+                                                <p className={`text-[10px] font-black uppercase mt-1 ${selectedRegister.billStatus?.toLowerCase() === 'paid' ? 'text-emerald-500' : 'text-slate-400'}`}>{selectedRegister.billStatus || 'Unpaid'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Assigned Staff</p>
+                                                <div className="flex items-center gap-2">
+                                                    {selectedRegister.staffName ? (
+                                                        <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg">{selectedRegister.staffName}</span>
+                                                    ) : (
+                                                        <span className="text-xs font-bold text-slate-400 italic">Unassigned</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4 pt-6 border-t border-slate-100">
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Remarks & Narration</p>
+                                            <p className="text-sm font-medium text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-100 min-h-[80px]">
+                                                {selectedRegister.remarks || selectedRegister.purposeNarration || 'No additional remarks.'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Incoming Documents</p>
+                                            <p className="text-sm font-medium text-slate-600 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                {selectedRegister.incomingDocuments || 'None'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 
