@@ -33,6 +33,7 @@ switch ($method) {
         $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
         $search = $_GET['search'] ?? '';
         $branch = $_GET['branch'] ?? 'All Branches';
+        $clientExactName = $_GET['clientExactName'] ?? '';
         
         $sql = "SELECT * FROM incoming_register WHERE 1=1 ";
         $countSql = "SELECT COUNT(*) FROM incoming_register WHERE 1=1 ";
@@ -47,6 +48,11 @@ switch ($method) {
             $sql .= "AND (reference_code LIKE :search OR customer_name LIKE :search) ";
             $countSql .= "AND (reference_code LIKE :search OR customer_name LIKE :search) ";
             $params[':search'] = '%' . $search . '%';
+        }
+        if (!empty($clientExactName)) {
+            $sql .= "AND customer_name = :clientExactName ";
+            $countSql .= "AND customer_name = :clientExactName ";
+            $params[':clientExactName'] = $clientExactName;
         }
         
         $sql .= "ORDER BY date DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;

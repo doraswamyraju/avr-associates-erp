@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
 import { SERVICE_TYPES } from '../constants';
-import { BranchName, Client, Project, Task, TaskStatus, Branch } from '../types';
+import { BranchName, Client, Project, Task, TaskStatus, Branch, IncomingRegisterEntry } from '../types';
 import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
@@ -681,25 +681,28 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
 
 const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEdit?: () => void, onNewEngagement?: () => void }> = ({ client, onBack, onEdit, onNewEngagement }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [projects, setProjects] = useState<Project[]>([]);
+    const [incomingRegisters, setIncomingRegisters] = useState<IncomingRegisterEntry[]>([]);
     const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'profile'>('overview');
 
     useEffect(() => {
         const fetchRelated = async () => {
             try {
-                const [t, p] = await Promise.all([api.getTasks(client.id), api.getProjects(client.id)]);
+                const [t, irRes] = await Promise.all([
+                    api.getTasks(client.id), 
+                    api.getIncomingRegister(100, 0, '', 'All Branches', client.name)
+                ]);
                 setTasks(t);
-                setProjects(p);
+                setIncomingRegisters(irRes.data || []);
             } catch (e) {
                 console.error("Failed to load client details", e);
             }
         };
         fetchRelated();
-    }, [client.id]);
+    }, [client.id, client.name]);
 
     const tabs = [
         { id: 'overview', label: 'Overview', icon: LayoutGrid },
-        { id: 'projects', label: 'Projects', icon: Briefcase, count: projects.length },
+        { id: 'projects', label: 'Registers', icon: Briefcase, count: incomingRegisters.length },
         { id: 'tasks', label: 'Workflow', icon: List, count: tasks.length },
         { id: 'profile', label: 'Profile Data', icon: User },
     ];
@@ -764,8 +767,8 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
                                 <div className="bg-indigo-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden shadow-xl">
                                     <div className="relative z-10">
                                         <Briefcase className="w-10 h-10 text-indigo-300 mb-4" />
-                                        <h3 className="text-3xl font-black mb-1">{projects.length}</h3>
-                                        <p className="text-[10px] uppercase tracking-widest text-indigo-300">Active Engagements</p>
+                                        <h3 className="text-3xl font-black mb-1">{incomingRegisters.length}</h3>
+                                        <p className="text-[10px] uppercase tracking-widest text-indigo-300">Incoming Records</p>
                                     </div>
                                     <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-20"></div>
                                 </div>
@@ -783,18 +786,30 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
 
                     {activeTab === 'projects' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
-                            {projects.length > 0 ? (
+                            {incomingRegisters.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {projects.map(p => (
-                                        <div key={p.id} className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group">
-                                            <div className="flex justify-between items-start mb-4">
+                                    {incomingRegisters.map(reg => (
+                                        <div key={reg.id} className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
+                                            <div className="flex justify-between items-start mb-4 relative z-10">
                                                 <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600"><Briefcase size={20} /></div>
-                                                <span className="text-[10px] uppercase font-black bg-slate-100 text-slate-500 px-3 py-1 rounded-lg">{p.status}</span>
+                                                <span className={`text-[9px] uppercase font-black px-3 py-1 rounded-lg ${
+                                                    reg.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                                                    reg.status === 'Work In Progress' ? 'bg-amber-100 text-amber-700' :
+                                                    'bg-slate-100 text-slate-500'
+                                                }`}>{reg.status}</span>
                                             </div>
-                                            <h4 className="font-black text-slate-800 text-xl mb-2">{p.name}</h4>
-                                            <p className="text-sm text-slate-500 mb-4 line-clamp-2">{p.description || 'No description provided.'}</p>
-                                            <div className="pt-4 border-t border-slate-50 flex justify-between items-center text-xs font-bold text-slate-400">
-                                                <span>Budget: ₹{p.budget?.toLocaleString() || '0'}</span>
+                                            <h4 className="font-black text-slate-800 text-lg mb-1 relative z-10">{reg.serviceName || 'General Service'}</h4>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 relative z-10">{reg.period1 || 'No Period Found'}</p>
+                                            <p className="text-xs text-slate-500 mb-6 line-clamp-2 leading-relaxed relative z-10">{reg.remarks || reg.purposeNarration || 'No remarks available.'}</p>
+                                            <div className="pt-5 border-t border-slate-50 flex justify-between items-center text-[10px] font-black uppercase tracking-widest relative z-10">
+                                                <span className="text-slate-400 flex flex-col gap-1">
+                                                    <span>Billed Amount</span>
+                                                    <span className={`text-sm ${reg.billStatus?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-slate-800'}`}>₹{reg.billAmount?.toLocaleString() || '0'}</span>
+                                                </span>
+                                                <span className="text-slate-400 flex flex-col gap-1 items-end">
+                                                    <span>Entry Date</span>
+                                                    <span className="text-slate-600 text-xs">{reg.date}</span>
+                                                </span>
                                             </div>
                                         </div>
                                     ))}
@@ -802,8 +817,8 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
                             ) : (
                                 <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">
                                     <Briefcase size={48} className="mx-auto text-slate-200 mb-4" />
-                                    <p className="text-slate-400 font-bold">No active projects linked to this client.</p>
-                                    <button onClick={onNewEngagement} className="mt-4 text-indigo-600 font-black text-xs uppercase tracking-widest hover:underline">Create First Engagement</button>
+                                    <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No Incoming Records linked to this client.</p>
+                                    <button onClick={onNewEngagement} className="mt-4 px-6 py-2.5 bg-indigo-50 text-indigo-600 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-indigo-100 transition-colors">Record First Incoming</button>
                                 </div>
                             )}
                         </div>
