@@ -23,21 +23,21 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     const [staffList, setStaffList] = useState<Staff[]>([]);
     const [incomingTotal, setIncomingTotal] = useState<number>(0);
     const [visitorRegister, setVisitorRegister] = useState<VisitorRegisterEntry[]>([]);
-    const [projects, setProjects] = useState<Project[]>([]);
+    const [activeProjectsCount, setActiveProjectsCount] = useState<number>(0);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadDashboardData = async () => {
             setLoading(true);
             try {
-                const [tasksData, clientsData, invoicesData, staffData, incomingData, visitorData, projectsData] = await Promise.all([
+                const [tasksData, clientsData, invoicesData, staffData, incomingData, visitorData, incomingStatsData] = await Promise.all([
                     api.getTasks(),
                     api.getClients(),
                     api.getInvoices(),
                     api.getStaff(),
                     api.getIncomingRegister(1, 0, '', selectedBranch),
                     api.getVisitorRegister(),
-                    api.getProjects()
+                    api.getIncomingRegisterStats(selectedBranch)
                 ]);
                 setTasks(tasksData);
                 setClients(clientsData);
@@ -45,7 +45,9 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                 setStaffList(staffData);
                 setIncomingTotal(incomingData.total || 0);
                 setVisitorRegister(visitorData);
-                setProjects(projectsData);
+                // Active Projects = Data Received + Work In Progress
+                const active = (incomingStatsData['Data Received'] || 0) + (incomingStatsData['Work In Progress'] || 0) + (incomingStatsData['Data Pending'] || 0);
+                setActiveProjectsCount(active);
             } catch (error) {
                 console.error("Failed to load dashboard data", error);
             } finally {
@@ -60,7 +62,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     const branchFilteredClients = clients.filter(c => selectedBranch === BranchName.ALL || c.branch === selectedBranch);
     const branchFilteredVisitors = visitorRegister.filter(v => selectedBranch === BranchName.ALL || v.branch === selectedBranch);
     const branchFilteredStaff = staffList.filter(s => selectedBranch === BranchName.ALL || s.branch === selectedBranch);
-    const branchFilteredProjects = projects.filter(p => selectedBranch === BranchName.ALL || p.branch === selectedBranch);
+    // branchFilteredProjects removed - Active Projects now comes from incoming register stats (Data Received + WIP)
 
     const services = [
         { id: 'gst', name: 'GST', icon: Landmark, color: 'text-indigo-600', bg: 'bg-indigo-50' },
@@ -194,12 +196,12 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                         />
                          <TrackerCard 
                             title="Active Projects" 
-                            count={branchFilteredProjects.length} 
+                            count={activeProjectsCount} 
                             icon={Briefcase} 
                             actionLabel="New Project"
                             variant="emerald"
                             onCardClick={() => onNavigate?.('tasks')}
-                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('tasks', { quickAction: 'NEW_PROJECT' }); }}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('tasks', { quickAction: 'NEW_INCOMING' }); }}
                         />
                         <TrackerCard 
                             title="Audit Reports" 
