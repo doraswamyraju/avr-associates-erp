@@ -1,11 +1,20 @@
 <?php
 require_once 'db_connect.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Ensure the table has the address and remarks columns (add if missing)
 try {
-    $pdo->exec("ALTER TABLE visitor_register ADD COLUMN IF NOT EXISTS address VARCHAR(300) NULL");
-    $pdo->exec("ALTER TABLE visitor_register ADD COLUMN IF NOT EXISTS remarks TEXT NULL");
-} catch (Throwable $e) { /* Ignore if already exists */ }
+    // Check if columns exist (MySQL compatible way)
+    $columns = $pdo->query("DESCRIBE visitor_register")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('address', $columns)) {
+        $pdo->exec("ALTER TABLE visitor_register ADD COLUMN address VARCHAR(300) NULL AFTER visitor_name");
+    }
+    if (!in_array('remarks', $columns)) {
+        $pdo->exec("ALTER TABLE visitor_register ADD COLUMN remarks TEXT NULL AFTER purpose");
+    }
+} catch (Exception $e) { /* Ignore if it fails */ }
+  catch (Throwable $t) { /* Ignore if it fails */ }
 
 header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
@@ -114,9 +123,11 @@ switch ($method) {
                     ':status'       => substr((string)($row['status'] ?? 'In'), 0, 50),
                 ]);
                 $created++;
-            } catch (Throwable $e) {
+            } catch (Exception $e) {
                 // log and continue for batch imports
                 error_log("Visitor insert error: " . $e->getMessage());
+            } catch (Throwable $t) {
+                error_log("Visitor insert error (Throwable): " . $t->getMessage());
             }
         }
 
