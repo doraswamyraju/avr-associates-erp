@@ -8,10 +8,12 @@ interface IncomingRegisterManagerProps {
     selectedBranch: BranchName;
     quickAction?: string | null;
     onQuickActionHandled?: () => void;
+    preSelectedClient?: string;
 }
 
-const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled }) => {
-    const [viewMode, setViewMode] = useState<'list' | 'add'>('list');
+const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, preSelectedClient }) => {
+    const [viewMode, setViewMode] = useState<'list' | 'add' | 'edit'>('list');
+    const [editingRegister, setEditingRegister] = useState<IncomingRegisterEntry | null>(null);
     const [registers, setRegisters] = useState<IncomingRegisterEntry[]>([]);
     const [totalRegisters, setTotalRegisters] = useState(0);
     const [stats, setStats] = useState({ dataReceived: 0, wip: 0, completed: 0 });
@@ -38,6 +40,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
 
     useEffect(() => {
         if (quickAction === 'NEW_INCOMING') {
+            setEditingRegister(null);
             setViewMode('add');
             if (onQuickActionHandled) onQuickActionHandled();
         }
@@ -53,6 +56,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         }
     };
 
+    // fetchData appends if page > 1, replaces if page === 1
     const fetchData = async (isLoadMore: boolean = false) => {
         setIsLoading(true);
         try {
@@ -83,6 +87,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
 
     useEffect(() => {
         fetchData(page > 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, limit, debouncedSearch, selectedBranch]);
 
     const handleImportRegisters = async (data: any[]) => {
@@ -152,6 +157,17 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         alert(`Successfully imported ${successCount} incoming register records!`);
     };
 
+    const handleDelete = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this entry?')) return;
+        try {
+            await api.deleteIncomingRegister(id);
+            setRegisters(prev => prev.filter(r => r.id !== id));
+            setTotalRegisters(prev => prev - 1);
+        } catch (err) {
+            alert('Failed to delete entry.');
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden relative">
             {viewMode === 'list' ? (
@@ -160,7 +176,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     selectedBranch={selectedBranch}
-                    onAddNew={() => setViewMode('add')} 
+                    onAddNew={() => { setEditingRegister(null); setViewMode('add'); }} 
                     isLoading={isLoading}
                     onImport={handleImportRegisters}
                     totalRegisters={totalRegisters}
@@ -168,15 +184,19 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     setPage={setPage}
                     limit={limit}
                     stats={stats}
+                    onEdit={(reg) => { setEditingRegister(reg); setViewMode('edit'); }}
+                    onDelete={handleDelete}
                 />
             ) : (
                 <IncomingRegisterForm 
                     onCancel={() => setViewMode('list')} 
-                    onSuccess={() => { setViewMode('list'); fetchData(); }}
+                    onSuccess={() => { setViewMode('list'); setPage(1); fetchData(); }}
                     clients={clients}
                     staff={staff}
                     selectedBranch={selectedBranch === BranchName.ALL ? 'Ravulapalem' as BranchName : selectedBranch}
                     onClientAdded={(newClient) => setClients(prev => [...prev, newClient])}
+                    initialData={editingRegister || undefined}
+                    preSelectedClientName={preSelectedClient}
                 />
             )}
         </div>
@@ -195,8 +215,10 @@ const IncomingRegisterList: React.FC<{
     page: number,
     setPage: React.Dispatch<React.SetStateAction<number>>,
     limit: number,
-    stats: { dataReceived: number, wip: number, completed: number }
-}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, page, setPage, limit, stats }) => {
+    stats: { dataReceived: number, wip: number, completed: number },
+    onEdit: (reg: IncomingRegisterEntry) => void,
+    onDelete: (id: string) => void,
+}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, page, setPage, limit, stats, onEdit, onDelete }) => {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
@@ -310,8 +332,8 @@ const IncomingRegisterList: React.FC<{
                                     </td>
                                     <td className="px-3 py-3 text-center border-r border-slate-100">
                                         <div className="flex items-center justify-center gap-1.5">
-                                            <button onClick={() => alert('Editing entry: ' + reg.id)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"><Edit size={14} /></button>
-                                            <button onClick={() => alert('Deleting entry: ' + reg.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                                            <button onClick={() => onEdit(reg)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors" title="Edit"><Edit size={14} /></button>
+                                            <button onClick={() => onDelete(reg.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -337,11 +359,14 @@ const IncomingRegisterForm: React.FC<{
     clients: Client[],
     staff: Staff[],
     selectedBranch: BranchName,
-    onClientAdded: (client: Client) => void
-}> = ({ onCancel, onSuccess, clients, staff, selectedBranch, onClientAdded }) => {
-    const [formData, setFormData] = useState<Partial<IncomingRegisterEntry>>({
+    onClientAdded: (client: Client) => void,
+    initialData?: IncomingRegisterEntry,
+    preSelectedClientName?: string,
+}> = ({ onCancel, onSuccess, clients, staff, selectedBranch, onClientAdded, initialData, preSelectedClientName }) => {
+    const isEditing = !!initialData;
+    const [formData, setFormData] = useState<Partial<IncomingRegisterEntry>>(initialData ? { ...initialData } : {
         referenceCode: '',
-        customerName: '',
+        customerName: preSelectedClientName || '',
         serviceName: '',
         date: new Date().toISOString().split('T')[0],
         assessmentYear: '',
@@ -362,7 +387,7 @@ const IncomingRegisterForm: React.FC<{
         purposeNarration: '',
         status: 'Data Received',
         remarks: '',
-        branch: selectedBranch
+        branch: selectedBranch,
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -378,7 +403,11 @@ const IncomingRegisterForm: React.FC<{
         setIsLoading(true);
         setError(null);
         try {
-            await api.createIncomingRegister(formData as Omit<IncomingRegisterEntry, 'id'>);
+            if (isEditing && initialData?.id) {
+                await api.updateIncomingRegister(initialData.id, formData);
+            } else {
+                await api.createIncomingRegister(formData as Omit<IncomingRegisterEntry, 'id'>);
+            }
             onSuccess();
         } catch (err: any) {
             setError(err.message || 'Failed to save incoming register');

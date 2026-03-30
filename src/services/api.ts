@@ -286,6 +286,27 @@ export const api = {
         return response.json();
     },
 
+    updateIncomingRegister: async (id: string, data: Partial<IncomingRegisterEntry>): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/incoming_register.php`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update entry');
+        }
+        return response.json();
+    },
+
+    deleteIncomingRegister: async (id: string): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/incoming_register.php?id=${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete entry');
+        return response.json();
+    },
+
     getVisitorRegister: async (): Promise<any[]> => {
         const response = await fetch(`${API_BASE_URL}/visitor_register.php`);
         if (!response.ok) throw new Error('Failed to fetch visitor register');

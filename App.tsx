@@ -133,19 +133,9 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard selectedBranch={selectedBranch} userRole={user.role} currentUser={user} onNavigate={handleNavigation} />;
       case 'clients':
-        return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} />;
+        return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} onNavigate={handleNavigation} />;
       case 'tasks':
-        return (
-          <TaskManager
-            selectedBranch={selectedBranch}
-            currentUser={user}
-            quickAction={quickAction}
-            onQuickActionHandled={resetQuickAction}
-            preSelectedAssignee={pageParams?.assignee}
-            activeTaskTimer={activeTaskTimer}
-            setActiveTaskTimer={setActiveTaskTimer}
-          />
-        );
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} />;
       case 'billing':
         return <BillingManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       case 'compliance':
@@ -159,7 +149,7 @@ const App: React.FC = () => {
       case 'branches':
         return <BranchManager />;
       case 'incoming':
-        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">

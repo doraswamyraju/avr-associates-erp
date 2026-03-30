@@ -16,11 +16,12 @@ interface ClientManagerProps {
     quickAction: string | null;
     onQuickActionHandled: () => void;
     availableBranches: Branch[];
+    onNavigate?: (tab: string, params?: any) => void;
 }
 
 type ViewState = 'directory' | 'client_detail' | 'onboarding';
 
-const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, availableBranches }) => {
+const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, availableBranches, onNavigate }) => {
     const [viewMode, setViewMode] = useState<ViewState>('directory');
     const [directoryViewType, setDirectoryViewType] = useState<'grid' | 'list'>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -219,7 +220,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
             client={selectedClient}
             onBack={handleBack}
             onEdit={() => { setClientIdToEdit(selectedClient); setViewMode('onboarding'); }}
-            onNewEngagement={() => setShowEngagementModal(true)}
+            onNewEngagement={() => onNavigate && onNavigate('incoming', { quickAction: 'NEW_INCOMING', clientExactName: selectedClient.name })}
         />;
     }
 

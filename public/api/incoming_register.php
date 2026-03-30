@@ -187,5 +187,70 @@ switch ($method) {
             ], JSON_INVALID_UTF8_SUBSTITUTE);
         }
         break;
+
+    case 'PUT':
+        $raw = file_get_contents('php://input');
+        $input = json_decode($raw, true);
+        if (empty($input['id'])) {
+            http_response_code(400); echo json_encode(['error' => 'Missing ID']); exit;
+        }
+        $updateFields = [];
+        $params = [':id' => $input['id']];
+        $keyMap = [
+            'referenceCode' => 'reference_code', 'customerName' => 'customer_name', 'serviceName' => 'service_name', 
+            'date' => 'date', 'assessmentYear' => 'assessment_year', 'period1' => 'period_1', 'period2' => 'period_2', 
+            'dueDate' => 'due_date', 'completedDate' => 'completed_date', 'staffName' => 'staff_name', 
+            'incomingDocuments' => 'incoming_documents', 'verifiedBy' => 'verified_by', 'verifiedStatus' => 'verified_status', 
+            'arnRefNo' => 'arn_ref_no', 'billNo' => 'bill_no', 'billAmount' => 'bill_amount', 
+            'modeOfPayment' => 'mode_of_payment', 'paymentInfo' => 'payment_info', 'billStatus' => 'bill_status', 
+            'purposeNarration' => 'purpose_narration', 'status' => 'status', 'remarks' => 'remarks', 'branch' => 'branch'
+        ];
+        foreach ($keyMap as $jsKey => $dbCol) {
+            if (array_key_exists($jsKey, $input)) {
+                $updateFields[] = "$dbCol = :$dbCol";
+                $val = $input[$jsKey];
+                
+                // Keep numbers/floats properly parsed, but if string is empty make it null
+                if ($val === '') {
+                    $val = null;
+                }
+                
+                // Format dates
+                if ($jsKey === 'date' || $jsKey === 'dueDate' || $jsKey === 'completedDate') {
+                    if (!empty($val) && (strtotime($val) || is_numeric($val))) {
+                        $val = is_numeric($val) ? gmdate("Y-m-d", (int)(($val - 25569) * 86400)) : date('Y-m-d', strtotime($val));
+                    }
+                }
+                
+                $params[":$dbCol"] = $val;
+            }
+        }
+        
+        if (!empty($updateFields)) {
+            $sql = "UPDATE incoming_register SET " . implode(', ', $updateFields) . " WHERE id = :id";
+            try {
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                echo json_encode(['message' => 'Updated successfully']);
+            } catch (Throwable $e) {
+                http_response_code(500); echo json_encode(['error' => $e->getMessage()]);
+            }
+        } else {
+            echo json_encode(['message' => 'No fields to update']);
+        }
+        break;
+
+    case 'DELETE':
+        $raw = file_get_contents('php://input');
+        $input = json_decode($raw, true) ?? [];
+        $id = $_GET['id'] ?? $input['id'] ?? '';
+        if ($id) {
+            $stmt = $pdo->prepare("DELETE FROM incoming_register WHERE id = ?");
+            $stmt->execute([$id]);
+            echo json_encode(['message' => 'Deleted successfully']);
+        } else {
+            http_response_code(400); echo json_encode(['error' => 'Missing ID']);
+        }
+        break;
 }
 ?>
