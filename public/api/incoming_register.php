@@ -5,8 +5,59 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query("SELECT * FROM incoming_register ORDER BY date DESC");
+        if (isset($_GET['stats'])) {
+            $branch = $_GET['branch'] ?? 'All Branches';
+            $sql = "SELECT status, COUNT(*) as count FROM incoming_register ";
+            $params = [];
+            if ($branch !== 'All Branches') {
+                $sql .= "WHERE branch = :branch ";
+                $params[':branch'] = $branch;
+            }
+            $sql .= "GROUP BY status";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            $stats = ['Data Received' => 0, 'Work In Progress' => 0, 'Completed' => 0, 'Data Pending' => 0];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (isset($stats[$row['status']])) {
+                    $stats[$row['status']] = (int)$row['count'];
+                }
+            }
+            $stats['Data Received'] += $stats['Data Pending'];
+            echo json_encode($stats);
+            break;
+        }
+
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+        $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+        $search = $_GET['search'] ?? '';
+        $branch = $_GET['branch'] ?? 'All Branches';
+        
+        $sql = "SELECT * FROM incoming_register WHERE 1=1 ";
+        $countSql = "SELECT COUNT(*) FROM incoming_register WHERE 1=1 ";
+        $params = [];
+        
+        if ($branch !== 'All Branches') {
+            $sql .= "AND branch = :branch ";
+            $countSql .= "AND branch = :branch ";
+            $params[':branch'] = $branch;
+        }
+        if (!empty($search)) {
+            $sql .= "AND (reference_code LIKE :search OR customer_name LIKE :search) ";
+            $countSql .= "AND (reference_code LIKE :search OR customer_name LIKE :search) ";
+            $params[':search'] = '%' . $search . '%';
+        }
+        
+        $sql .= "ORDER BY date DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
         
         $formatted = array_map(function($i) {
             return [
@@ -37,7 +88,7 @@ switch ($method) {
             ];
         }, $data);
 
-        echo json_encode($formatted);
+        echo json_encode(['data' => $formatted, 'total' => $total]);
         break;
 
     case 'POST':

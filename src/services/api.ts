@@ -251,9 +251,21 @@ export const api = {
     },
     
     // Registers
-    getIncomingRegister: async (): Promise<IncomingRegisterEntry[]> => {
-        const response = await fetch(`${API_BASE_URL}/incoming_register.php`);
+    getIncomingRegister: async (limit: number = 100, offset: number = 0, search: string = '', branch: string = 'All Branches'): Promise<{data: IncomingRegisterEntry[], total: number}> => {
+        const params = new URLSearchParams({
+            limit: limit.toString(),
+            offset: offset.toString(),
+            search,
+            branch
+        });
+        const response = await fetch(`${API_BASE_URL}/incoming_register.php?${params}`);
         if (!response.ok) throw new Error('Failed to fetch incoming register');
+        return response.json();
+    },
+
+    getIncomingRegisterStats: async (branch: string = 'All Branches'): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/incoming_register.php?stats=true&branch=${encodeURIComponent(branch)}`);
+        if (!response.ok) throw new Error('Failed to fetch stats');
         return response.json();
     },
 

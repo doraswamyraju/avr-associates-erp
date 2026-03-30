@@ -13,14 +13,32 @@ interface IncomingRegisterManagerProps {
 const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled }) => {
     const [viewMode, setViewMode] = useState<'list' | 'add'>('list');
     const [registers, setRegisters] = useState<IncomingRegisterEntry[]>([]);
+    const [totalRegisters, setTotalRegisters] = useState(0);
+    const [stats, setStats] = useState({ dataReceived: 0, wip: 0, completed: 0 });
     const [clients, setClients] = useState<Client[]>([]);
     const [staff, setStaff] = useState<Staff[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(10);
+    const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, selectedBranch, limit]);
+
+    useEffect(() => {
+        fetchDropdownData();
+    }, []);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page, limit, debouncedSearch, selectedBranch]);
 
     useEffect(() => {
         if (quickAction === 'NEW_INCOMING') {
@@ -29,17 +47,31 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         }
     }, [quickAction, onQuickActionHandled]);
 
+    const fetchDropdownData = async () => {
+        try {
+            const [clientsData, staffData] = await Promise.all([api.getClients(), api.getStaff()]);
+            setClients(clientsData);
+            setStaff(staffData);
+        } catch (error) {
+            console.error('Failed to fetch dropdowns:', error);
+        }
+    };
+
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [regData, clientsData, staffData] = await Promise.all([
-                api.getIncomingRegister(),
-                api.getClients(),
-                api.getStaff()
+            const offset = (page - 1) * limit;
+            const [regResponse, statsData] = await Promise.all([
+                api.getIncomingRegister(limit, offset, debouncedSearch, selectedBranch),
+                api.getIncomingRegisterStats(selectedBranch)
             ]);
-            setRegisters(regData);
-            setClients(clientsData);
-            setStaff(staffData);
+            setRegisters(regResponse.data || []);
+            setTotalRegisters(regResponse.total || 0);
+            setStats({
+                dataReceived: statsData['Data Received'] || 0,
+                wip: statsData['Work In Progress'] || 0,
+                completed: statsData['Completed'] || 0
+            });
         } catch (error) {
             console.error('Failed to fetch data:', error);
         } finally {
@@ -114,25 +146,23 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         alert(`Successfully imported ${successCount} incoming register records!`);
     };
 
-    const filteredRegisters = registers.filter(reg => {
-        const matchesBranch = selectedBranch === BranchName.ALL || reg.branch === selectedBranch;
-        const matchesSearch = 
-            (reg.referenceCode?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
-            (reg.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
-        return matchesBranch && matchesSearch;
-    });
-
     return (
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden relative">
             {viewMode === 'list' ? (
                 <IncomingRegisterList 
-                    registers={filteredRegisters} 
+                    registers={registers} 
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     selectedBranch={selectedBranch}
                     onAddNew={() => setViewMode('add')} 
                     isLoading={isLoading}
                     onImport={handleImportRegisters}
+                    totalRegisters={totalRegisters}
+                    page={page}
+                    setPage={setPage}
+                    limit={limit}
+                    setLimit={setLimit}
+                    stats={stats}
                 />
             ) : (
                 <IncomingRegisterForm 
@@ -155,12 +185,14 @@ const IncomingRegisterList: React.FC<{
     selectedBranch: BranchName,
     onAddNew: () => void,
     isLoading: boolean,
-    onImport: (data: any[]) => Promise<void>
-}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport }) => {
-    
-    const dataReceived = registers.filter(r => r.status === 'Data Received' || r.status === 'Data Pending').length;
-    const wip = registers.filter(r => r.status === 'Work In Progress').length;
-    const completed = registers.filter(r => r.status === 'Completed').length;
+    onImport: (data: any[]) => Promise<void>,
+    totalRegisters: number,
+    page: number,
+    setPage: (p: number) => void,
+    limit: number,
+    setLimit: (l: number) => void,
+    stats: { dataReceived: number, wip: number, completed: number }
+}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, page, setPage, limit, setLimit, stats }) => {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -185,18 +217,19 @@ const IncomingRegisterList: React.FC<{
                         </div>
                     </div>
                     <div className="text-sm text-slate-700">
-                        Data Received <span className="font-bold">{dataReceived}</span> {' | '} 
-                        Work in Progress <span className="font-bold">{wip}</span> {' | '} 
-                        Completed <span className="font-bold">{completed}</span>
+                        Data Received <span className="font-bold">{stats.dataReceived}</span> {' | '} 
+                        Work in Progress <span className="font-bold">{stats.wip}</span> {' | '} 
+                        Completed <span className="font-bold">{stats.completed}</span>
                     </div>
                 </div>
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-t border-slate-100 pt-4">
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                         Show 
-                        <select className="border border-slate-300 rounded px-2 py-1 outline-none">
-                            <option>10</option>
-                            <option>25</option>
-                            <option>50</option>
+                        <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
                         </select> 
                         entries
                     </div>
@@ -281,6 +314,31 @@ const IncomingRegisterList: React.FC<{
                     </table>
                 </div>
             </div>
+
+            {/* Pagination Controls */}
+            {!isLoading && totalRegisters > 0 && (
+                <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
+                    <div className="text-sm text-slate-500">
+                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalRegisters)} of {totalRegisters} entries
+                    </div>
+                    <div className="flex gap-1">
+                        <button 
+                            disabled={page === 1} 
+                            onClick={() => setPage(page - 1)} 
+                            className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <button 
+                            disabled={page * limit >= totalRegisters} 
+                            onClick={() => setPage(page + 1)} 
+                            className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
