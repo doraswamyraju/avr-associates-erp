@@ -30,9 +30,14 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => {
-        setPage(1);
+    useEffect(() => { 
+        setPage(1); 
+        if (page === 1) fetchData(false);
     }, [debouncedSearch, selectedBranch, limit]);
+
+    useEffect(() => {
+        if (page > 1) fetchData(true);
+    }, [page]);
 
     useEffect(() => {
         fetchDropdownData();
@@ -86,9 +91,10 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     };
 
     useEffect(() => {
-        fetchData(page > 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, limit, debouncedSearch, selectedBranch]);
+        if (page > 1) {
+            fetchData(true);
+        }
+    }, [page]);
 
     const handleImportRegisters = async (data: any[]) => {
         let successCount = 0;

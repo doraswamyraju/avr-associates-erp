@@ -29,7 +29,14 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
     }, [searchTerm]);
 
     // Reset page on filter change
-    useEffect(() => { setPage(1); }, [debouncedSearch, selectedBranch]);
+    useEffect(() => { 
+        setPage(1); 
+        if (page === 1) fetchData(false);
+    }, [debouncedSearch, selectedBranch]);
+
+    useEffect(() => {
+        if (page > 1) fetchData(true);
+    }, [page]);
 
     // Quick action
     useEffect(() => {
@@ -57,8 +64,6 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
             setIsLoading(false);
         }
     };
-
-    useEffect(() => { fetchData(page > 1); }, [page, debouncedSearch, selectedBranch]);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
