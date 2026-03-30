@@ -265,7 +265,10 @@ export const api = {
         });
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create entry');
+            const errorMessage = errorData.details 
+                ? `${errorData.error}: ${errorData.details}` 
+                : (errorData.error || 'Failed to create entry');
+            throw new Error(errorMessage);
         }
         return response.json();
     },

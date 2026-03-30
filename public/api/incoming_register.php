@@ -41,7 +41,13 @@ switch ($method) {
         break;
 
     case 'POST':
-        $input = json_decode(file_get_contents('php://input'), true);
+        $raw = file_get_contents('php://input');
+        $input = json_decode($raw, true);
+        if (!is_array($input)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid JSON input', 'details' => json_last_error_msg()]);
+            exit;
+        }
         if (empty($input['id'])) {
             $input['id'] = 'INC-' . substr(uniqid(), -6) . mt_rand(10, 99);
         }
