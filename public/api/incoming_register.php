@@ -45,9 +45,11 @@ switch ($method) {
             $params[':branch'] = $branch;
         }
         if (!empty($search)) {
-            $sql .= "AND (LOWER(reference_code) LIKE LOWER(:search) OR LOWER(customer_name) LIKE LOWER(:search)) ";
-            $countSql .= "AND (LOWER(reference_code) LIKE LOWER(:search) OR LOWER(customer_name) LIKE LOWER(:search)) ";
-            $params[':search'] = '%' . $search . '%';
+            $sql .= "AND (LOWER(reference_code) LIKE :search1 OR LOWER(customer_name) LIKE :search2) ";
+            $countSql .= "AND (LOWER(reference_code) LIKE :search1 OR LOWER(customer_name) LIKE :search2) ";
+            $searchVal = '%' . strtolower($search) . '%';
+            $params[':search1'] = $searchVal;
+            $params[':search2'] = $searchVal;
         }
         if (!empty($clientExactName)) {
             $sql .= "AND customer_name = :clientExactName ";
