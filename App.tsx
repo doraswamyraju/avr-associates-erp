@@ -12,6 +12,7 @@ import ServiceCatalogue from './components/ServiceCatalogue';
 import StaffManager from './components/StaffManager';
 import BranchManager from './components/BranchManager';
 import IncomingRegisterManager from './components/IncomingRegisterManager';
+import VisitorRegisterManager from './components/VisitorRegisterManager';
 import LoginPage from './components/LoginPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import { BranchName, User, UserRole, Task, Branch } from './types';
@@ -150,6 +151,8 @@ const App: React.FC = () => {
         return <BranchManager />;
       case 'incoming':
         return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} />;
+      case 'visitors':
+        return <VisitorRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">

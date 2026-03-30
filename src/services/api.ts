@@ -307,9 +307,46 @@ export const api = {
         return response.json();
     },
 
-    getVisitorRegister: async (): Promise<any[]> => {
-        const response = await fetch(`${API_BASE_URL}/visitor_register.php`);
+    getVisitorRegister: async (limit = 20, offset = 0, search = '', branch = 'All Branches'): Promise<{ data: any[], total: number }> => {
+        const params = new URLSearchParams({ limit: String(limit), offset: String(offset), search, branch });
+        const response = await fetch(`${API_BASE_URL}/visitor_register.php?${params}`);
         if (!response.ok) throw new Error('Failed to fetch visitor register');
+        return response.json();
+    },
+
+    createVisitorBatch: async (rows: any[]): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/visitor_register.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rows)
+        });
+        if (!response.ok) throw new Error('Failed to save visitors');
+        return response.json();
+    },
+
+    createVisitor: async (data: any): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/visitor_register.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify([data])
+        });
+        if (!response.ok) throw new Error('Failed to create visitor');
+        return response.json();
+    },
+
+    updateVisitor: async (id: string, data: any): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/visitor_register.php`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id })
+        });
+        if (!response.ok) throw new Error('Failed to update visitor');
+        return response.json();
+    },
+
+    deleteVisitor: async (id: string): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/visitor_register.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete visitor');
         return response.json();
     },
 

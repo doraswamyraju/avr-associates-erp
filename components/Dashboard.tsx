@@ -23,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     const [staffList, setStaffList] = useState<Staff[]>([]);
     const [incomingTotal, setIncomingTotal] = useState<number>(0);
     const [visitorRegister, setVisitorRegister] = useState<VisitorRegisterEntry[]>([]);
+    const [visitorTotal, setVisitorTotal] = useState<number>(0);
     const [activeProjectsCount, setActiveProjectsCount] = useState<number>(0);
     const [loading, setLoading] = useState(true);
 
@@ -44,7 +45,8 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                 setInvoices(invoicesData);
                 setStaffList(staffData);
                 setIncomingTotal(incomingData.total || 0);
-                setVisitorRegister(visitorData);
+                setVisitorRegister(visitorData.data || []);
+                setVisitorTotal(visitorData.total || 0);
                 // Active Projects = Data Received + Work In Progress
                 const active = (incomingStatsData['Data Received'] || 0) + (incomingStatsData['Work In Progress'] || 0) + (incomingStatsData['Data Pending'] || 0);
                 setActiveProjectsCount(active);
@@ -235,12 +237,12 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                         />
                         <TrackerCard 
                             title="Visitor Register" 
-                            count={branchFilteredVisitors.length} 
+                            count={visitorTotal} 
                             icon={UserPlus} 
                             actionLabel="Add Visitor"
                             variant="blue"
-                            onCardClick={() => onNavigate?.('reports')}
-                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('reports'); }}
+                            onCardClick={() => onNavigate?.('visitors')}
+                            onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('visitors', { quickAction: 'ADD_VISITOR' }); }}
                         />
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Users, FileText, Calendar, CreditCard, PieChart, Briefcase, LogOut, Shield, UserCog } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Calendar, CreditCard, PieChart, Briefcase, LogOut, Shield, UserCog, ClipboardList, UserCheck } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -15,14 +15,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     
     // Define all possible items with role access control
     const allMenuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
-        { id: 'tasks', label: 'Projects & Tasks', icon: FileText, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
-        { id: 'clients', label: 'Clients', icon: Users, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
-        { id: 'staff', label: 'Staff Directory', icon: UserCog, roles: [UserRole.ADMIN] }, // Admin Only
-        { id: 'compliance', label: 'Compliance', icon: Calendar, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
-        { id: 'services', label: 'Service Catalogue', icon: Briefcase, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
-        { id: 'billing', label: 'Billing & Accounts', icon: CreditCard, roles: [UserRole.ADMIN] }, // Admin Only
-        { id: 'reports', label: 'Reports & Analytics', icon: PieChart, roles: [UserRole.ADMIN] }, // Admin Only
+        { id: 'dashboard',  label: 'Dashboard',          icon: LayoutDashboard, roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'tasks',      label: 'Projects & Tasks',    icon: FileText,        roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'incoming',   label: 'Incoming Register',   icon: ClipboardList,   roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'visitors',   label: 'Visitor Register',    icon: UserCheck,       roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'clients',    label: 'Clients',             icon: Users,           roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'staff',      label: 'Staff Directory',     icon: UserCog,         roles: [UserRole.ADMIN] },
+        { id: 'compliance', label: 'Compliance',          icon: Calendar,        roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'services',   label: 'Service Catalogue',   icon: Briefcase,       roles: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        { id: 'billing',    label: 'Billing & Accounts',  icon: CreditCard,      roles: [UserRole.ADMIN] },
+        { id: 'reports',    label: 'Reports & Analytics', icon: PieChart,        roles: [UserRole.ADMIN] },
     ];
 
     const visibleItems = allMenuItems.filter(item => item.roles.includes(userRole));

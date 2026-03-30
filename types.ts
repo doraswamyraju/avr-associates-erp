@@ -229,11 +229,13 @@ export interface IncomingRegisterEntry {
 export interface VisitorRegisterEntry {
     id: string;
     visitorName: string;
-    phone: string;
-    purpose: string;
-    date: string;
-    time: string;
-    whomToMeet: string;
-    status: 'In' | 'Out' | 'Scheduled';
+    address?: string;
+    phone?: string;
+    purpose?: string;
+    remarks?: string;
+    visitDate: string;
+    entryTime?: string;
+    exitTime?: string;
     branch: BranchName;
+    status?: string;
 }
