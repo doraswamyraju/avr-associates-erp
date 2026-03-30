@@ -14,7 +14,6 @@ try {
         $pdo->exec("ALTER TABLE visitor_register ADD COLUMN remarks TEXT NULL AFTER purpose");
     }
 } catch (Exception $e) { /* Ignore if it fails */ }
-  catch (Throwable $t) { /* Ignore if it fails */ }
 
 header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
@@ -126,8 +125,6 @@ switch ($method) {
             } catch (Exception $e) {
                 // log and continue for batch imports
                 error_log("Visitor insert error: " . $e->getMessage());
-            } catch (Throwable $t) {
-                error_log("Visitor insert error (Throwable): " . $t->getMessage());
             }
         }
 
