@@ -24,7 +24,6 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const LIMIT = 20;
     const [offset, setOffset] = useState(0);
-    const isLoadingRef = React.useRef(false);
 
     // Debounce search
     useEffect(() => {
@@ -32,7 +31,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    // When filters change reset list and offset
+    // When filters change: clear list and reset offset to 0
     useEffect(() => {
         setRegisters([]);
         setOffset(0);
@@ -41,10 +40,8 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     // Load data whenever offset, search or branch changes
     useEffect(() => {
         let cancelled = false;
+        setIsLoading(true);
         const load = async () => {
-            if (isLoadingRef.current) return;
-            isLoadingRef.current = true;
-            setIsLoading(true);
             try {
                 const [regResponse, statsData] = await Promise.all([
                     api.getIncomingRegister(LIMIT, offset, debouncedSearch, selectedBranch),
@@ -65,7 +62,6 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
             } catch (err) {
                 console.error('Failed to fetch data:', err);
             } finally {
-                isLoadingRef.current = false;
                 if (!cancelled) setIsLoading(false);
             }
         };
@@ -93,7 +89,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         }
     };
 
-    const fetchData = async () => {
+    const fetchData = () => {
         setRegisters([]);
         setOffset(0);
     };
