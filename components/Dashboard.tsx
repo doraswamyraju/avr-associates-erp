@@ -21,20 +21,21 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     const [clients, setClients] = useState<Client[]>([]);
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [staffList, setStaffList] = useState<Staff[]>([]);
-    const [incomingRegister, setIncomingRegister] = useState<IncomingRegisterEntry[]>([]);
+    const [incomingTotal, setIncomingTotal] = useState<number>(0);
     const [visitorRegister, setVisitorRegister] = useState<VisitorRegisterEntry[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadDashboardData = async () => {
+            setLoading(true);
             try {
                 const [tasksData, clientsData, invoicesData, staffData, incomingData, visitorData, projectsData] = await Promise.all([
                     api.getTasks(),
                     api.getClients(),
                     api.getInvoices(),
                     api.getStaff(),
-                    api.getIncomingRegister(),
+                    api.getIncomingRegister(1, 0, '', selectedBranch),
                     api.getVisitorRegister(),
                     api.getProjects()
                 ]);
@@ -42,7 +43,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                 setClients(clientsData);
                 setInvoices(invoicesData);
                 setStaffList(staffData);
-                setIncomingRegister(incomingData.data || []);
+                setIncomingTotal(incomingData.total || 0);
                 setVisitorRegister(visitorData);
                 setProjects(projectsData);
             } catch (error) {
@@ -52,12 +53,11 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
             }
         };
         loadDashboardData();
-    }, []);
+    }, [selectedBranch]);
 
-    // Filter Data based on Branch
+    // Filter Data based on Branch (For those fully loaded)
     const branchFilteredTasks = tasks.filter(t => selectedBranch === BranchName.ALL || t.branch === selectedBranch);
     const branchFilteredClients = clients.filter(c => selectedBranch === BranchName.ALL || c.branch === selectedBranch);
-    const branchFilteredIncoming = incomingRegister.filter(i => selectedBranch === BranchName.ALL || i.branch === selectedBranch);
     const branchFilteredVisitors = visitorRegister.filter(v => selectedBranch === BranchName.ALL || v.branch === selectedBranch);
     const branchFilteredStaff = staffList.filter(s => selectedBranch === BranchName.ALL || s.branch === selectedBranch);
     const branchFilteredProjects = projects.filter(p => selectedBranch === BranchName.ALL || p.branch === selectedBranch);
@@ -224,7 +224,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <TrackerCard 
                             title="Incoming Register" 
-                            count={branchFilteredIncoming.length} 
+                            count={incomingTotal} 
                             icon={PencilLine} 
                             actionLabel="Add Incoming"
                             variant="blue"

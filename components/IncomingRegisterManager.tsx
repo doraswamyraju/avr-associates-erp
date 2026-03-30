@@ -57,7 +57,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         }
     };
 
-    const fetchData = async () => {
+    const fetchData = async (isLoadMore: boolean = false) => {
         setIsLoading(true);
         try {
             const offset = (page - 1) * limit;
@@ -65,7 +65,13 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                 api.getIncomingRegister(limit, offset, debouncedSearch, selectedBranch),
                 api.getIncomingRegisterStats(selectedBranch)
             ]);
-            setRegisters(regResponse.data || []);
+            
+            if (isLoadMore) {
+                setRegisters(prev => [...prev, ...(regResponse.data || [])]);
+            } else {
+                setRegisters(regResponse.data || []);
+            }
+            
             setTotalRegisters(regResponse.total || 0);
             setStats({
                 dataReceived: statsData['Data Received'] || 0,
@@ -78,6 +84,10 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
             setIsLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchData(page > 1);
+    }, [page, limit, debouncedSearch, selectedBranch]);
 
     const handleImportRegisters = async (data: any[]) => {
         let successCount = 0;
@@ -161,7 +171,6 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     page={page}
                     setPage={setPage}
                     limit={limit}
-                    setLimit={setLimit}
                     stats={stats}
                 />
             ) : (
@@ -188,11 +197,19 @@ const IncomingRegisterList: React.FC<{
     onImport: (data: any[]) => Promise<void>,
     totalRegisters: number,
     page: number,
-    setPage: (p: number) => void,
+    setPage: React.Dispatch<React.SetStateAction<number>>,
     limit: number,
-    setLimit: (l: number) => void,
     stats: { dataReceived: number, wip: number, completed: number }
-}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, page, setPage, limit, setLimit, stats }) => {
+}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, page, setPage, limit, stats }) => {
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop <= clientHeight + 50) {
+            if (!isLoading && registers.length < totalRegisters) {
+                setPage(p => p + 1);
+            }
+        }
+    };
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -223,15 +240,8 @@ const IncomingRegisterList: React.FC<{
                     </div>
                 </div>
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-t border-slate-100 pt-4">
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                        Show 
-                        <select value={limit} onChange={(e) => setLimit(Number(e.target.value))} className="border border-slate-300 rounded px-2 py-1 outline-none">
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                        </select> 
-                        entries
+                    <div className="flex items-center gap-2 text-sm text-slate-600 font-bold">
+                        Showing {registers.length} of {totalRegisters} entries (Auto-loading on scroll)
                     </div>
                     <div className="flex items-center gap-4">
                         <div className="relative flex items-center">
@@ -246,8 +256,8 @@ const IncomingRegisterList: React.FC<{
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto relative bg-white">
-                <div className="min-w-max border-b border-slate-200 pb-20">
+            <div className="flex-1 overflow-y-auto relative bg-white" onScroll={handleScroll}>
+                <div className="min-w-max border-b border-slate-200 pb-10">
                     <table className="w-full text-left text-xs">
                         <thead className="bg-white text-slate-700 font-bold border-b border-slate-200">
                             <tr>
@@ -304,41 +314,23 @@ const IncomingRegisterList: React.FC<{
                                     </td>
                                     <td className="px-3 py-3 text-center border-r border-slate-100">
                                         <div className="flex items-center justify-center gap-1.5">
-                                            <button className="p-[3px] text-white bg-emerald-500 hover:bg-emerald-600 rounded" title="Edit"><Edit size={12} strokeWidth={2.5} /></button>
-                                            <button className="p-[3px] text-white bg-red-500 hover:bg-red-600 rounded" title="Delete"><span className="flex items-center justify-center w-[12px] h-[12px] font-black text-[10px] leading-none">✕</span></button>
+                                            <button onClick={() => alert('Editing entry: ' + reg.id)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"><Edit size={14} /></button>
+                                            <button onClick={() => alert('Deleting entry: ' + reg.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    
+                    {isLoading && (
+                        <div className="w-full py-4 flex items-center justify-center text-slate-400 font-bold text-sm">
+                            <div className="animate-spin w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full mr-2"></div>
+                            Loading records...
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {/* Pagination Controls */}
-            {!isLoading && totalRegisters > 0 && (
-                <div className="p-4 bg-white border-t border-slate-200 flex items-center justify-between shrink-0">
-                    <div className="text-sm text-slate-500">
-                        Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalRegisters)} of {totalRegisters} entries
-                    </div>
-                    <div className="flex gap-1">
-                        <button 
-                            disabled={page === 1} 
-                            onClick={() => setPage(page - 1)} 
-                            className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors"
-                        >
-                            Previous
-                        </button>
-                        <button 
-                            disabled={page * limit >= totalRegisters} 
-                            onClick={() => setPage(page + 1)} 
-                            className="px-3 py-1 border border-slate-300 rounded text-sm text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
@@ -706,7 +698,7 @@ const SearchableCustomerSelect = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filteredClients = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    const filteredClients = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase())).slice(0, 50);
 
     return (
         <div className="space-y-1.5 relative" ref={wrapperRef}>

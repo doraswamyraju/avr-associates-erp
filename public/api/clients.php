@@ -5,7 +5,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query("SELECT * FROM clients");
+        $stmt = $pdo->query("SELECT id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by FROM clients ORDER BY name ASC");
         $clients = $stmt->fetchAll();
         echo json_encode($clients);
         break;

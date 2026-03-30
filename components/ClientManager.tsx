@@ -787,32 +787,44 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
                     {activeTab === 'projects' && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
                             {incomingRegisters.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {incomingRegisters.map(reg => (
-                                        <div key={reg.id} className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
-                                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                                <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600"><Briefcase size={20} /></div>
-                                                <span className={`text-[9px] uppercase font-black px-3 py-1 rounded-lg ${
-                                                    reg.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                                                    reg.status === 'Work In Progress' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-slate-100 text-slate-500'
-                                                }`}>{reg.status}</span>
-                                            </div>
-                                            <h4 className="font-black text-slate-800 text-lg mb-1 relative z-10">{reg.serviceName || 'General Service'}</h4>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 relative z-10">{reg.period1 || 'No Period Found'}</p>
-                                            <p className="text-xs text-slate-500 mb-6 line-clamp-2 leading-relaxed relative z-10">{reg.remarks || reg.purposeNarration || 'No remarks available.'}</p>
-                                            <div className="pt-5 border-t border-slate-50 flex justify-between items-center text-[10px] font-black uppercase tracking-widest relative z-10">
-                                                <span className="text-slate-400 flex flex-col gap-1">
-                                                    <span>Billed Amount</span>
-                                                    <span className={`text-sm ${reg.billStatus?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-slate-800'}`}>₹{reg.billAmount?.toLocaleString() || '0'}</span>
-                                                </span>
-                                                <span className="text-slate-400 flex flex-col gap-1 items-end">
-                                                    <span>Entry Date</span>
-                                                    <span className="text-slate-600 text-xs">{reg.date}</span>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
+                                            <tr>
+                                                <th className="px-8 py-5">Service Reference</th>
+                                                <th className="px-8 py-5">Period</th>
+                                                <th className="px-8 py-5">Status</th>
+                                                <th className="px-8 py-5">Billed Amount</th>
+                                                <th className="px-8 py-5 text-right">Entry Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {incomingRegisters.map(reg => (
+                                                <tr key={reg.id} className="hover:bg-indigo-50/30 transition-colors">
+                                                    <td className="px-8 py-6 font-bold text-slate-800">
+                                                        <div className="flex flex-col">
+                                                            <span>{reg.serviceName || 'General Service'}</span>
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{reg.referenceCode || reg.id}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6"><span className="text-xs font-bold text-slate-600 font-mono">{reg.period1 || 'N/A'}</span></td>
+                                                    <td className="px-8 py-6">
+                                                        <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl ${
+                                                            reg.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
+                                                            reg.status === 'Work In Progress' ? 'bg-amber-50 text-amber-600' :
+                                                            'bg-slate-100 text-slate-500'
+                                                        }`}>{reg.status}</span>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <span className={`text-xs font-black ${reg.billStatus?.toLowerCase() === 'paid' ? 'text-emerald-600' : 'text-slate-800'}`}>
+                                                            ₹{reg.billAmount?.toLocaleString() || '0'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right"><span className="text-xs font-medium text-slate-500">{reg.date}</span></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             ) : (
                                 <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">

@@ -58,11 +58,17 @@ switch ($method) {
         $sql .= "ORDER BY date DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        $countStmt = $pdo->prepare($countSql);
+        
+        foreach($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+            $countStmt->bindValue($key, $val);
+        }
+        
+        $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
-        $countStmt = $pdo->prepare($countSql);
-        $countStmt->execute($params);
+        $countStmt->execute();
         $total = (int)$countStmt->fetchColumn();
         
         $formatted = array_map(function($i) {
