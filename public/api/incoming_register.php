@@ -58,8 +58,8 @@ switch ($method) {
             :mode_of_payment, :payment_info, :bill_status, :purpose_narration, :status, :remarks, :branch
         )";
         
-        $stmt = $pdo->prepare($sql);
         try {
+            $stmt = $pdo->prepare($sql);
             
             // Format dates from Excel numeric values if needed or fallback to today
             $date = $input['date'] ?? null;

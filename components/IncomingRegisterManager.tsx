@@ -154,67 +154,121 @@ const IncomingRegisterList: React.FC<{
     onImport: (data: any[]) => Promise<void>
 }> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport }) => {
     
+    const dataReceived = registers.filter(r => r.status === 'Data Received' || r.status === 'Data Pending').length;
+    const wip = registers.filter(r => r.status === 'Work In Progress').length;
+    const completed = registers.filter(r => r.status === 'Completed').length;
+
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="p-6 bg-white border-b border-slate-200 shrink-0">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Incoming Register</h2>
-                        <p className="text-slate-500 text-sm font-medium">Track all incoming documents, bills, and communications.</p>
+            <div className="p-4 bg-white border-b border-slate-200 shrink-0">
+                <div className="flex flex-col gap-4 mb-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl font-medium text-slate-700 mr-2">Incoming Register List</h2>
+                            <button onClick={onAddNew} className="px-3 py-1.5 bg-sky-500 text-white rounded text-sm shadow-sm hover:bg-sky-600">Add Incoming</button>
+                            <button className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm shadow-sm hover:bg-emerald-700">Paid List</button>
+                            <button className="px-3 py-1.5 bg-red-600 text-white rounded text-sm shadow-sm hover:bg-red-700">Unpaid List</button>
+                            <button className="px-3 py-1.5 bg-red-500 text-white rounded text-sm shadow-sm hover:bg-red-600">Bad debts</button>
+                            <button className="px-3 py-1.5 bg-indigo-900 text-white rounded text-sm shadow-sm hover:bg-indigo-800 uppercase">STAFF WISE LIST</button>
+                        </div>
+                        <div className="flex gap-2">
+                            <ExcelImporter
+                                templateName="Incoming Register"
+                                requiredColumns={[]}
+                                onImport={onImport}
+                            />
+                            <button className="px-3 py-1.5 bg-orange-400 text-white rounded text-sm shadow-sm hover:bg-orange-500">Print Incoming</button>
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <ExcelImporter
-                            templateName="Incoming Register"
-                            requiredColumns={[]}
-                            onImport={onImport}
-                        />
-                        <button onClick={onAddNew} className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all active:scale-95">
-                            <Plus size={18} strokeWidth={3} /> Add Incoming
-                        </button>
+                    <div className="text-sm text-slate-700">
+                        Data Received <span className="font-bold">{dataReceived}</span> {' | '} 
+                        Work in Progress <span className="font-bold">{wip}</span> {' | '} 
+                        Completed <span className="font-bold">{completed}</span>
                     </div>
                 </div>
-                <div className="flex flex-col md:flex-row gap-4 items-center">
-                    <div className="relative flex-1 w-full">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input type="text" placeholder="Search by reference code or customer name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm" />
+                <div className="flex flex-col md:flex-row gap-4 items-center justify-between border-t border-slate-100 pt-4">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                        Show 
+                        <select className="border border-slate-300 rounded px-2 py-1 outline-none">
+                            <option>10</option>
+                            <option>25</option>
+                            <option>50</option>
+                        </select> 
+                        entries
                     </div>
-                    <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-2xl border border-indigo-100 text-[10px] font-black uppercase tracking-[0.15em]"><MapPin size={14} />Branch: {selectedBranch}</div>
+                    <div className="flex items-center gap-4">
+                        <div className="relative flex items-center">
+                            <span className="text-sm text-slate-600 mr-2">Search:</span>
+                            <div className="relative">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-64 pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 outline-none" />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded border border-indigo-100 text-xs font-bold uppercase tracking-wider"><MapPin size={12} />{selectedBranch}</div>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 relative">
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-20">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] border-b border-slate-100">
+            <div className="flex-1 overflow-y-auto relative bg-white">
+                <div className="min-w-max border-b border-slate-200 pb-20">
+                    <table className="w-full text-left text-xs">
+                        <thead className="bg-white text-slate-700 font-bold border-b border-slate-200">
                             <tr>
-                                <th className="px-6 py-4">Ref Code</th>
-                                <th className="px-6 py-4">Customer Name</th>
-                                <th className="px-6 py-4">Date</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Options</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Period</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Ref.Code</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Client Name</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Staff Name</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Documents</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">service</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Verified By</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Reference No</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Entry Date</th>
+                                <th className="px-3 py-3 border-r border-slate-100 text-red-500 whitespace-nowrap">Due Date</th>
+                                <th className="px-3 py-3 border-r border-slate-100 text-red-500 whitespace-nowrap">Completed Date</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Bill status</th>
+                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Status</th>
+                                <th className="px-3 py-3 text-center whitespace-nowrap">OPtions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400 font-medium">Loading register data...</td></tr>
+                                <tr><td colSpan={14} className="px-6 py-8 text-center text-slate-400 font-medium">Loading register data...</td></tr>
                             ) : registers.length === 0 ? (
-                                <tr><td colSpan={5} className="px-6 py-8 text-center text-slate-400 font-medium">No records found.</td></tr>
+                                <tr><td colSpan={14} className="px-6 py-8 text-center text-slate-400 font-medium">No records found.</td></tr>
                             ) : registers.map(reg => (
-                                <tr key={reg.id} className="hover:bg-indigo-50/30 transition-colors group">
-                                    <td className="px-6 py-5 font-bold text-slate-700">{reg.referenceCode || reg.id}</td>
-                                    <td className="px-6 py-5 font-medium text-slate-800">{reg.customerName || '-'}</td>
-                                    <td className="px-6 py-5 text-slate-500">{reg.date}</td>
-                                    <td className="px-6 py-5">
-                                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full ${
-                                            reg.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
-                                            reg.status === 'Work In Progress' ? 'bg-blue-100 text-blue-700' :
-                                            reg.status === 'Data Pending' ? 'bg-amber-100 text-amber-700' :
-                                            'bg-slate-100 text-slate-600'
+                                <tr key={reg.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[120px]" title={reg.period1}>{reg.period1 || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100">{reg.referenceCode || reg.id}</td>
+                                    <td className="px-3 py-3 text-slate-700 border-r border-slate-100 uppercase truncate max-w-[200px]" title={reg.customerName}>{reg.customerName || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[100px]">{reg.staffName || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 uppercase truncate max-w-[200px]" title={reg.incomingDocuments}>{reg.incomingDocuments || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[150px]">{reg.serviceName || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[100px]">{reg.verifiedBy || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[150px]">{reg.arnRefNo || '-'}</td>
+                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 whitespace-nowrap">{reg.date}</td>
+                                    <td className="px-3 py-3 text-red-500 border-r border-slate-100 whitespace-nowrap">{reg.dueDate || '-'}</td>
+                                    <td className="px-3 py-3 text-red-500 border-r border-slate-100 whitespace-nowrap">{reg.completedDate || '-'}</td>
+                                    <td className="px-3 py-3 border-r border-slate-100">
+                                        {reg.billStatus ? (
+                                            <span className={`px-2 py-1 text-[10px] font-bold rounded ${
+                                                reg.billStatus.toLowerCase() === 'paid' ? 'bg-emerald-500 text-white' :
+                                                reg.billStatus.toLowerCase() === 'unpaid' ? 'bg-red-500 text-white' :
+                                                'bg-amber-500 text-white'
+                                            }`}>{reg.billStatus}</span>
+                                        ) : '-'}
+                                    </td>
+                                    <td className="px-3 py-3 border-r border-slate-100">
+                                        <span className={`px-2 py-1 text-[10px] font-bold rounded ${
+                                            reg.status === 'Completed' ? 'bg-emerald-500 text-white' :
+                                            reg.status === 'Work In Progress' ? 'bg-emerald-500 text-white' :
+                                            reg.status === 'Data Pending' ? 'bg-amber-500 text-white' :
+                                            'bg-slate-500 text-white'
                                         }`}>{reg.status}</span>
                                     </td>
-                                    <td className="px-6 py-5 text-right">
-                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button className="p-2 text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors" title="View"><Eye size={16} strokeWidth={2.5} /></button>
+                                    <td className="px-3 py-3 text-center border-r border-slate-100">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <button className="p-[3px] text-white bg-emerald-500 hover:bg-emerald-600 rounded" title="Edit"><Edit size={12} strokeWidth={2.5} /></button>
+                                            <button className="p-[3px] text-white bg-red-500 hover:bg-red-600 rounded" title="Delete"><span className="flex items-center justify-center w-[12px] h-[12px] font-black text-[10px] leading-none">✕</span></button>
                                         </div>
                                     </td>
                                 </tr>
