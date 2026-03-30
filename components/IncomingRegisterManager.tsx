@@ -67,9 +67,8 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         return () => { isAborted = true; };
     }, [page, limit, debouncedSearch, selectedBranch, refreshKey]);
 
-    // This effect only handles RESETS
+    // Reset page on filter change
     useEffect(() => {
-        setRegisters([]);
         setPage(1);
     }, [debouncedSearch, selectedBranch, limit]);
 

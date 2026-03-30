@@ -57,7 +57,6 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
 
     // Reset page on filter change
     useEffect(() => { 
-        setVisitors([]); // Clear immediately on filter change
         setPage(1); 
     }, [debouncedSearch, selectedBranch]);
 

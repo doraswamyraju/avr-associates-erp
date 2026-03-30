@@ -4,13 +4,17 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 // Ensure the table has the address and remarks columns (add if missing)
+$columns = [];
 try {
     // Check if columns exist (MySQL compatible way)
-    $columns = $pdo->query("DESCRIBE visitor_register")->fetchAll(PDO::FETCH_COLUMN);
-    if (!in_array('address', $columns)) {
+    $stmt = $pdo->query("DESCRIBE visitor_register");
+    if ($stmt) {
+        $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+    if ($columns && !in_array('address', $columns)) {
         $pdo->exec("ALTER TABLE visitor_register ADD COLUMN address VARCHAR(300) NULL AFTER visitor_name");
     }
-    if (!in_array('remarks', $columns)) {
+    if ($columns && !in_array('remarks', $columns)) {
         $pdo->exec("ALTER TABLE visitor_register ADD COLUMN remarks TEXT NULL AFTER purpose");
     }
 } catch (Exception $e) { /* Ignore if it fails */ }
