@@ -1,5 +1,6 @@
 <?php
 require_once 'db_connect.php';
+die("REACHED TOP");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
