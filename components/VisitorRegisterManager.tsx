@@ -20,6 +20,7 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
     const [detailEntry, setDetailEntry] = useState<VisitorRegisterEntry | null>(null);
 
     // Debounce search
@@ -28,15 +29,42 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
         return () => clearTimeout(t);
     }, [searchTerm]);
 
+    useEffect(() => {
+        let isAborted = false;
+        const load = async () => {
+            setIsLoading(true);
+            try {
+                const offset = (page - 1) * LIMIT;
+                const result = await api.getVisitorRegister(LIMIT, offset, debouncedSearch, selectedBranch);
+                if (isAborted) return;
+
+                if (page === 1) {
+                    setVisitors(result.data || []);
+                } else {
+                    setVisitors(prev => [...prev, ...(result.data || [])]);
+                }
+                setTotal(result.total || 0);
+            } catch (e) {
+                console.error('Failed to load visitors', e);
+            } finally {
+                if (!isAborted) setIsLoading(false);
+            }
+        };
+
+        load();
+        return () => { isAborted = true; };
+    }, [page, debouncedSearch, selectedBranch, refreshKey]);
+
     // Reset page on filter change
     useEffect(() => { 
+        setVisitors([]); // Clear immediately on filter change
         setPage(1); 
-        if (page === 1) fetchData(false);
     }, [debouncedSearch, selectedBranch]);
 
-    useEffect(() => {
-        if (page > 1) fetchData(true);
-    }, [page]);
+    const fetchData = async () => { 
+        if (page === 1) setRefreshKey(prev => prev + 1);
+        else setPage(1);
+    };
 
     // Quick action
     useEffect(() => {
@@ -46,24 +74,6 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
             if (onQuickActionHandled) onQuickActionHandled();
         }
     }, [quickAction]);
-
-    const fetchData = async (isLoadMore = false) => {
-        setIsLoading(true);
-        try {
-            const offset = (page - 1) * LIMIT;
-            const result = await api.getVisitorRegister(LIMIT, offset, debouncedSearch, selectedBranch);
-            if (isLoadMore) {
-                setVisitors(prev => [...prev, ...(result.data || [])]);
-            } else {
-                setVisitors(result.data || []);
-            }
-            setTotal(result.total || 0);
-        } catch (e) {
-            console.error('Failed to load visitors', e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;

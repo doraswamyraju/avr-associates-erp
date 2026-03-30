@@ -24,20 +24,54 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(10);
     const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    useEffect(() => { 
-        setPage(1); 
-        if (page === 1) fetchData(false);
-    }, [debouncedSearch, selectedBranch, limit]);
-
     useEffect(() => {
-        if (page > 1) fetchData(true);
-    }, [page]);
+        let isAborted = false;
+        const load = async () => {
+            setIsLoading(true);
+            try {
+                const offset = (page - 1) * limit;
+                const [regResponse, statsData] = await Promise.all([
+                    api.getIncomingRegister(limit, offset, debouncedSearch, selectedBranch),
+                    api.getIncomingRegisterStats(selectedBranch)
+                ]);
+                
+                if (isAborted) return;
+
+                if (page === 1) {
+                    setRegisters(regResponse.data || []);
+                } else {
+                    setRegisters(prev => [...prev, ...(regResponse.data || [])]);
+                }
+                
+                setTotalRegisters(regResponse.total || 0);
+                setStats({
+                    dataReceived: statsData['Data Received'] || 0,
+                    wip: statsData['Work In Progress'] || 0,
+                    completed: statsData['Completed'] || 0
+                });
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+            } finally {
+                if (!isAborted) setIsLoading(false);
+            }
+        };
+
+        load();
+        return () => { isAborted = true; };
+    }, [page, limit, debouncedSearch, selectedBranch, refreshKey]);
+
+    // This effect only handles RESETS
+    useEffect(() => {
+        setRegisters([]);
+        setPage(1);
+    }, [debouncedSearch, selectedBranch, limit]);
 
     useEffect(() => {
         fetchDropdownData();
@@ -61,40 +95,10 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         }
     };
 
-    // fetchData appends if page > 1, replaces if page === 1
-    const fetchData = async (isLoadMore: boolean = false) => {
-        setIsLoading(true);
-        try {
-            const offset = (page - 1) * limit;
-            const [regResponse, statsData] = await Promise.all([
-                api.getIncomingRegister(limit, offset, debouncedSearch, selectedBranch),
-                api.getIncomingRegisterStats(selectedBranch)
-            ]);
-            
-            if (isLoadMore) {
-                setRegisters(prev => [...prev, ...(regResponse.data || [])]);
-            } else {
-                setRegisters(regResponse.data || []);
-            }
-            
-            setTotalRegisters(regResponse.total || 0);
-            setStats({
-                dataReceived: statsData['Data Received'] || 0,
-                wip: statsData['Work In Progress'] || 0,
-                completed: statsData['Completed'] || 0
-            });
-        } catch (error) {
-            console.error('Failed to fetch data:', error);
-        } finally {
-            setIsLoading(false);
-        }
+    const fetchData = async () => {
+        if (page === 1) setRefreshKey(prev => prev + 1);
+        else setPage(1);
     };
-
-    useEffect(() => {
-        if (page > 1) {
-            fetchData(true);
-        }
-    }, [page]);
 
     const handleImportRegisters = async (data: any[]) => {
         let successCount = 0;
