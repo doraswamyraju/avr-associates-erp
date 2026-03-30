@@ -29,16 +29,28 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
         return () => clearTimeout(t);
     }, [searchTerm]);
 
+    const prevFilters = React.useRef({ debouncedSearch, selectedBranch });
+
     useEffect(() => {
         let isAborted = false;
+
+        const filtersChanged =
+            prevFilters.current.debouncedSearch !== debouncedSearch ||
+            prevFilters.current.selectedBranch !== selectedBranch;
+
+        prevFilters.current = { debouncedSearch, selectedBranch };
+
+        const currentPage = filtersChanged ? 1 : page;
+        if (filtersChanged) setPage(1);
+
         const load = async () => {
             setIsLoading(true);
             try {
-                const offset = (page - 1) * LIMIT;
+                const offset = (currentPage - 1) * LIMIT;
                 const result = await api.getVisitorRegister(LIMIT, offset, debouncedSearch, selectedBranch);
                 if (isAborted) return;
 
-                if (page === 1) {
+                if (filtersChanged || currentPage === 1) {
                     setVisitors(result.data || []);
                 } else {
                     setVisitors(prev => [...prev, ...(result.data || [])]);
@@ -55,14 +67,8 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
         return () => { isAborted = true; };
     }, [page, debouncedSearch, selectedBranch, refreshKey]);
 
-    // Reset page on filter change
-    useEffect(() => { 
-        setPage(1); 
-    }, [debouncedSearch, selectedBranch]);
-
-    const fetchData = async () => { 
-        if (page === 1) setRefreshKey(prev => prev + 1);
-        else setPage(1);
+    const fetchData = async () => {
+        setRefreshKey(prev => prev + 1);
     };
 
     // Quick action
