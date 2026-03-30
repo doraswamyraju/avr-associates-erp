@@ -42,7 +42,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                 setClients(clientsData);
                 setInvoices(invoicesData);
                 setStaffList(staffData);
-                setIncomingRegister(incomingData);
+                setIncomingRegister(incomingData.data || []);
                 setVisitorRegister(visitorData);
                 setProjects(projectsData);
             } catch (error) {
