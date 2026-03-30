@@ -86,20 +86,24 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                 }
 
                 // If customer data is somewhat provided but client does not exist
-                const clientExists = clients.find(c => c.name.toLowerCase() === entryData.customerName?.toLowerCase());
+                const clientExists = clients.find(c => c.name?.toLowerCase() === entryData.customerName?.toLowerCase());
                 if (!clientExists && entryData.customerName) {
-                    const newClient = await api.createClient({
+                    const newClientData = {
                         name: entryData.customerName,
                         phone: row['Mobile Number'] || row['phone'] || row['Phone'] || '', 
                         branch: entryData.branch || selectedBranch,
-                        type: 'Individual',
-                        status: 'Active',
+                        type: 'Individual' as const,
+                        status: 'Active' as const,
                         email: '',
                         pan: ''
-                    } as Omit<Client, 'id'>);
+                    };
+                    const newClient = await api.createClient(newClientData as any);
                     
                     if (newClient) {
-                        clients.push(newClient); // Fix: Add to local array to prevent duplicate IDs on next loop iter
+                        clients.push({
+                            ...newClientData,
+                            id: newClient.id || `temp-${Date.now()}`
+                        } as Client);
                     }
                 }
             } catch (err) {
