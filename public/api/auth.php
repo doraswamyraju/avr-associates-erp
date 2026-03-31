@@ -174,12 +174,23 @@ function handleAdminSendReset($pdo, $data) {
         exit;
     }
 
-    $id = $data['userId'];
+    $id = $data['userId'] ?? null;
+    $emailParam = $data['email'] ?? null;
 
     try {
-        $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE id = ?");
-        $stmt->execute([$id]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = null;
+        if ($id) {
+            $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE id = ?");
+            $stmt->execute([$id]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if (!$user && $emailParam) {
+            $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE email = ?");
+            $stmt->execute([$emailParam]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($user) $id = $user['id'];
+        }
 
         if ($user && $user['email']) {
             $token = bin2hex(random_bytes(32));

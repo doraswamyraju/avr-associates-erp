@@ -55,11 +55,11 @@ export const api = {
             }
             return response.json();
         },
-        adminSendResetLink: async (userId: string): Promise<any> => {
+        adminSendResetLink: async (userId: string, email: string): Promise<any> => {
             const response = await fetch(`${API_BASE_URL}/auth.php?action=admin_send_reset`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId })
+                body: JSON.stringify({ userId, email })
             });
             if (!response.ok) {
                 const errorData = await response.json();

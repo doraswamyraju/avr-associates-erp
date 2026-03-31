@@ -83,9 +83,9 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
         }
     };
 
-    const handleSendPasswordLink = async (staffId: string) => {
+    const handleSendPasswordLink = async (staffId: string, email: string) => {
         try {
-            await api.auth.adminSendResetLink(staffId);
+            await api.auth.adminSendResetLink(staffId, email);
             alert('Password link sent successfully!');
         } catch (err: any) {
             alert('Error: ' + err.message);
@@ -118,7 +118,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
     };
 
     return (
-        <div className="flex-1 bg-slate-50 overflow-y-auto font-sans pb-20">
+        <div className="h-full bg-slate-50 overflow-y-auto font-sans pb-20">
             <div className="p-8 pb-4">
                 <div className="flex justify-between items-end mb-8">
                     <div>
@@ -268,7 +268,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
                                                 <Power size={14} /> Deactivate
                                             </button>
                                             <button 
-                                                onClick={() => handleSendPasswordLink(staff.id)}
+                                                onClick={() => handleSendPasswordLink(staff.id, staff.email || "")}
                                                 className="flex items-center gap-1.5 px-4 py-2 bg-sky-50 text-sky-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-sky-600 hover:text-white transition-all shadow-sm"
                                             >
                                                 <Send size={14} /> Password Link
