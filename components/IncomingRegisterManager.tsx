@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../src/services/api';
-import { BranchName, IncomingRegisterEntry, Client, Staff } from '../types';
-import { Search, Plus, MapPin, Eye, Edit, Trash2, ArrowLeft, Save, AlertCircle, RefreshCw } from 'lucide-react';
+import { BranchName, IncomingRegisterEntry, Client, Staff, SERVICES } from '../types';
+import { Search, Plus, MapPin, Eye, Edit, Trash2, ArrowLeft, Save, AlertCircle, RefreshCw, X, Activity } from 'lucide-react';
 import { ExcelImporter } from './ExcelImporter';
 
 interface IncomingRegisterManagerProps {
     selectedBranch: BranchName;
     quickAction?: string | null;
+    serviceFilter?: string | null;
     onQuickActionHandled?: () => void;
     preSelectedClient?: string;
     onNavigate?: (tab: string, params?: any) => void;
 }
 
-const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, preSelectedClient, onNavigate }) => {
+const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, serviceFilter, onQuickActionHandled, preSelectedClient, onNavigate }) => {
     const [viewMode, setViewMode] = useState<'list' | 'add' | 'edit'>('list');
     const [editingRegister, setEditingRegister] = useState<IncomingRegisterEntry | null>(null);
     const [registers, setRegisters] = useState<IncomingRegisterEntry[]>([]);
@@ -37,7 +38,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     useEffect(() => {
         setRegisters([]);
         setOffset(0);
-    }, [debouncedSearch, selectedBranch, refreshTrigger]);
+    }, [debouncedSearch, selectedBranch, refreshTrigger, serviceFilter]);
 
     // Load data whenever offset, search or branch changes
     useEffect(() => {
@@ -46,7 +47,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         const load = async () => {
             try {
                 const [regResponse, statsData] = await Promise.all([
-                    api.getIncomingRegister(LIMIT, offset, debouncedSearch, selectedBranch),
+                    api.getIncomingRegister(LIMIT, offset, debouncedSearch, selectedBranch, '', serviceFilter || ''),
                     api.getIncomingRegisterStats(selectedBranch)
                 ]);
                 if (cancelled) return;
@@ -177,6 +178,19 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
 
     return (
         <div className="flex flex-col h-full bg-slate-50 overflow-hidden relative">
+            {serviceFilter && (
+                <div className="bg-indigo-600 text-white px-6 py-2 flex items-center justify-between text-sm font-bold shrink-0">
+                    <div className="flex items-center gap-2">
+                        <Activity size={16} /> Viewing <span className="underline decoration-indigo-300 underline-offset-4">{serviceFilter}</span> Incoming Records
+                    </div>
+                    <button 
+                        onClick={() => onNavigate?.('incoming')} 
+                        className="flex items-center gap-1 hover:text-indigo-200 transition-colors uppercase tracking-widest text-[10px]"
+                    >
+                        <X size={14} /> Clear Filter
+                    </button>
+                </div>
+            )}
             {viewMode === 'list' ? (
                 <IncomingRegisterList 
                     registers={registers} 
@@ -211,6 +225,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     onClientAdded={(newClient) => setClients(prev => [...prev, newClient])}
                     initialData={editingRegister || undefined}
                     preSelectedClientName={preSelectedClient}
+                    fixedService={serviceFilter || undefined}
                 />
             )}
         </div>
@@ -378,12 +393,12 @@ const IncomingRegisterForm: React.FC<{
     onClientAdded: (client: Client) => void,
     initialData?: IncomingRegisterEntry,
     preSelectedClientName?: string,
-}> = ({ onCancel, onSuccess, clients, staff, selectedBranch, onClientAdded, initialData, preSelectedClientName }) => {
+    fixedService?: string,
+}> = ({ onCancel, onSuccess, clients, staff, selectedBranch, onClientAdded, initialData, preSelectedClientName, fixedService }) => {
     const isEditing = !!initialData;
     const [formData, setFormData] = useState<Partial<IncomingRegisterEntry>>(initialData ? { ...initialData } : {
         referenceCode: '',
         customerName: preSelectedClientName || '',
-        serviceName: '',
         date: new Date().toISOString().split('T')[0],
         assessmentYear: '',
         period1: '',
@@ -404,6 +419,7 @@ const IncomingRegisterForm: React.FC<{
         status: 'Data Received',
         remarks: '',
         branch: selectedBranch,
+        serviceName: fixedService || '',
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -515,25 +531,11 @@ const IncomingRegisterForm: React.FC<{
                                         value={formData.serviceName} 
                                         onChange={handleChange} 
                                         placeholder="Type or select a service"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                        readOnly={!!fixedService}
+                                        className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none ${fixedService ? 'bg-slate-100 cursor-not-allowed opacity-75' : ''}`} 
                                     />
                                     <datalist id="services-list">
-                                        <option value="GST Registration" />
-                                        <option value="GSTR-1 Filing" />
-                                        <option value="GSTR-3B Filing" />
-                                        <option value="Income Tax Return (ITR-1)" />
-                                        <option value="Income Tax Return (ITR-4)" />
-                                        <option value="TDS Return" />
-                                        <option value="Tax Audit" />
-                                        <option value="ROC / Company Law" />
-                                        <option value="Accounting & Bookkeeping" />
-                                        <option value="Food licence (FSSAI)" />
-                                        <option value="MSME Registration" />
-                                        <option value="Labour License" />
-                                        <option value="Project Report" />
-                                        <option value="Projections" />
-                                        <option value="PF AND ESI" />
-                                        <option value="Other Services" />
+                                        {SERVICES.map(s => <option key={s} value={s} />)}
                                     </datalist>
                                 </div>
 

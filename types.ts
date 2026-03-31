@@ -255,3 +255,17 @@ export interface VisitorRegisterEntry {
     branch: BranchName;
     status?: string;
 }
+
+export const SERVICES = [
+    'GST',
+    'TDS',
+    'Income tax',
+    'Food licence',
+    'MSME',
+    'Labour',
+    'Project Report',
+    'Projections',
+    'PF AND ESI',
+    'TAX AUDIT',
+    'Other Services'
+] as const;

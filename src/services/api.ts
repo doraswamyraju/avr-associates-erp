@@ -276,7 +276,7 @@ export const api = {
     },
     
     // Registers
-    getIncomingRegister: async (limit: number = 100, offset: number = 0, search: string = '', branch: string = 'All Branches', clientExactName: string = ''): Promise<{data: IncomingRegisterEntry[], total: number}> => {
+    getIncomingRegister: async (limit: number = 100, offset: number = 0, search: string = '', branch: string = 'All Branches', clientExactName: string = '', serviceName: string = ''): Promise<{data: IncomingRegisterEntry[], total: number}> => {
         const params = new URLSearchParams({
             limit: limit.toString(),
             offset: offset.toString(),
@@ -284,6 +284,7 @@ export const api = {
             branch
         });
         if (clientExactName) params.append('clientExactName', clientExactName);
+        if (serviceName) params.append('serviceName', serviceName);
         const response = await fetch(`${API_BASE_URL}/incoming_register.php?${params}`);
         if (!response.ok) throw new Error('Failed to fetch incoming register');
         return response.json();

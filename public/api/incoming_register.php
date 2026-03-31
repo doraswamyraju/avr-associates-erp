@@ -34,6 +34,7 @@ switch ($method) {
         $search = $_GET['search'] ?? '';
         $branch = $_GET['branch'] ?? 'All Branches';
         $clientExactName = $_GET['clientExactName'] ?? '';
+        $serviceName = $_GET['serviceName'] ?? '';
         
         $sql = "SELECT * FROM incoming_register WHERE 1=1 ";
         $countSql = "SELECT COUNT(*) FROM incoming_register WHERE 1=1 ";
@@ -55,6 +56,11 @@ switch ($method) {
             $sql .= "AND customer_name = :clientExactName ";
             $countSql .= "AND customer_name = :clientExactName ";
             $params[':clientExactName'] = $clientExactName;
+        }
+        if (!empty($serviceName)) {
+            $sql .= "AND service_name = :serviceName ";
+            $countSql .= "AND service_name = :serviceName ";
+            $params[':serviceName'] = $serviceName;
         }
         
         $sql .= "ORDER BY date DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset;

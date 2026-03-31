@@ -150,7 +150,7 @@ const App: React.FC = () => {
       case 'branches':
         return <BranchManager />;
       case 'incoming':
-        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} serviceFilter={pageParams?.serviceFilter} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
       case 'visitors':
         return <VisitorRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       default:

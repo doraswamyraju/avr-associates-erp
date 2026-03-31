@@ -117,7 +117,15 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
 
     const ServiceTab = ({ id, name, icon: Icon, color, bg }: any) => (
         <div 
-            onClick={() => onNavigate?.(id === 'catalogue' ? 'services' : id === 'deleted' ? 'clients' : 'services')}
+            onClick={() => {
+                if (id === 'catalogue') {
+                    onNavigate?.('services');
+                } else if (id === 'deleted') {
+                    onNavigate?.('clients');
+                } else {
+                    onNavigate?.('incoming', { serviceFilter: name });
+                }
+            }}
             className="bg-white rounded-[1.5rem] border border-slate-100 p-8 flex flex-col items-start gap-4 hover:shadow-xl transition-all duration-300 cursor-pointer group relative overflow-hidden"
         >
             <div className="absolute top-4 right-4 text-slate-100 group-hover:text-indigo-100/50 transition-colors">
