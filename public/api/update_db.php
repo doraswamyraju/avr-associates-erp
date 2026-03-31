@@ -29,9 +29,8 @@ try {
         echo "Columns 'username', 'password_hash' already exist in 'users'.<br>";
     }
 
-    // Update Incoming Register Table Structure
-    $pdo->exec("DROP TABLE IF EXISTS incoming_register");
-    $pdo->exec("CREATE TABLE incoming_register (
+    // Create/Update Incoming Register Table Structure
+    $pdo->exec("CREATE TABLE IF NOT EXISTS incoming_register (
         id VARCHAR(50) PRIMARY KEY,
         reference_code VARCHAR(150),
         customer_name VARCHAR(150),
@@ -57,7 +56,7 @@ try {
         remarks TEXT,
         branch VARCHAR(100)
     )");
-    echo "Table 'incoming_register' recreated with new expanded schema.<br>";
+    echo "Table 'incoming_register' checked/created.<br>";
 
     // Add Visitor Register Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS visitor_register (

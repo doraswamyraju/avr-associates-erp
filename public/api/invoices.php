@@ -71,6 +71,46 @@ switch ($method) {
                 ':notes' => $data['notes'] ?? null,
                 ':items' => json_encode($data['items'] ?? [])
             ]);
+
+            // Email automation for manual invoices
+            try {
+                require_once 'mail_utils.php';
+                $cStmt = $pdo->prepare("SELECT name, email FROM clients WHERE id = ?");
+                $cStmt->execute([$data['clientId']]);
+                $client = $cStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($client) {
+                    $clientName = $client['name'];
+                    $clientEmail = $client['email'];
+                    $invNum = $data['invoiceNumber'] ?? $data['id'];
+
+                    $emailSubject = "Invoice Generated - AVR Associates";
+                    $emailMessage = "
+                        <h3 style='font-size: 20px; font-weight: 800; margin-bottom: 16px;'>New Invoice Generated</h3>
+                        <p>An official tax invoice has been generated for your recent engagement with <span class='highlight'>AVR Associates</span>.</p>
+                        <div style='background: #f8fafc; padding: 24px; border-radius: 16px; margin: 24px 0; border: 1px solid #e2e8f0;'>
+                            <p style='margin: 0 0 10px;'><strong>Invoice No:</strong> <span class='highlight'>$invNum</span></p>
+                            <p style='margin: 0 0 10px;'><strong>Date:</strong> " . $data['date'] . "</p>
+                            <p style='margin: 0;'><strong>Total Amount:</strong> ₹" . number_format($data['amount'], 2) . "</p>
+                        </div>
+                        <p>You can download the PDF from your client portal.</p>
+                    ";
+
+                    if (!empty($clientEmail)) {
+                        send_erp_email($clientEmail, $emailSubject, $emailMessage);
+                    }
+                    send_erp_email('rajugariventures@gmail.com', "[ADMIN] Manual Invoice Generated: $clientName", "
+                        <p><strong>Client:</strong> $clientName ({$data['clientId']})</p>
+                        <p style='font-size: 18px; font-weight: bold;'>Amount: ₹" . number_format($data['amount'], 2) . "</p>
+                        <p>Invoice #: $invNum</p>
+                        <hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>
+                        $emailMessage
+                    ");
+                }
+            } catch (Throwable $mailErr) {
+                // Don't fail the invoice if mail failing
+            }
+
             echo json_encode(['message' => 'Invoice created', 'id' => $data['id']]);
         } catch (PDOException $e) {
             http_response_code(500);
