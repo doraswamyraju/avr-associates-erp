@@ -153,6 +153,28 @@ switch ($method) {
         }
 
         try {
+            // Check for duplicate PAN
+            if (!empty($data['pan'])) {
+                $checkPan = $pdo->prepare("SELECT id FROM clients WHERE pan = ? LIMIT 1");
+                $checkPan->execute([$data['pan']]);
+                if ($checkPan->fetch()) {
+                    http_response_code(409);
+                    echo json_encode(['error' => 'Duplicate Client', 'details' => 'A client with this PAN number already exists.']);
+                    break;
+                }
+            }
+
+            // Check for duplicate Name + Branch
+            if (!empty($data['name']) && !empty($data['branch'])) {
+                $checkName = $pdo->prepare("SELECT id FROM clients WHERE name = ? AND branch = ? LIMIT 1");
+                $checkName->execute([$data['name'], $data['branch']]);
+                if ($checkName->fetch()) {
+                    http_response_code(409);
+                    echo json_encode(['error' => 'Duplicate Client', 'details' => 'A client with this name already exists in the ' . $data['branch'] . ' branch.']);
+                    break;
+                }
+            }
+
             $pdo->beginTransaction();
             $stmt = $pdo->prepare($sql);
             

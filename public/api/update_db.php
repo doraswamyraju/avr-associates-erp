@@ -121,7 +121,7 @@ try {
         amount DECIMAL(15, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'Unpaid',
         notes TEXT,
-        items JSON
+        items TEXT
     )");
     echo "Table 'invoices' checked/created.<br>";
 
@@ -134,7 +134,7 @@ try {
         'sgst' => "DECIMAL(15, 2) DEFAULT 0",
         'igst' => "DECIMAL(15, 2) DEFAULT 0",
         'notes' => "TEXT",
-        'items' => "JSON"
+        'items' => "TEXT"
     ];
 
     foreach ($columnsToAdd as $col => $definition) {
