@@ -107,24 +107,43 @@ try {
         }
     }
 
-    // Alter invoices table to add GST fields
-    $sql = "SHOW COLUMNS FROM invoices LIKE 'invoice_number'";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute();
+    // Ensure invoices table exists and has all GST fields
+    $pdo->exec("CREATE TABLE IF NOT EXISTS invoices (
+        id VARCHAR(50) PRIMARY KEY,
+        invoice_number VARCHAR(100),
+        client_id VARCHAR(50) NOT NULL,
+        date DATE NOT NULL,
+        due_date DATE,
+        sub_total DECIMAL(15, 2) DEFAULT 0,
+        cgst DECIMAL(15, 2) DEFAULT 0,
+        sgst DECIMAL(15, 2) DEFAULT 0,
+        igst DECIMAL(15, 2) DEFAULT 0,
+        amount DECIMAL(15, 2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'Unpaid',
+        notes TEXT,
+        items JSON
+    )");
+    echo "Table 'invoices' checked/created.<br>";
 
-    if ($stmt->rowCount() == 0) {
-        $sql = "ALTER TABLE invoices 
-                ADD COLUMN invoice_number VARCHAR(100),
-                ADD COLUMN due_date DATE,
-                ADD COLUMN sub_total DECIMAL(15, 2) DEFAULT 0,
-                ADD COLUMN cgst DECIMAL(15, 2) DEFAULT 0,
-                ADD COLUMN sgst DECIMAL(15, 2) DEFAULT 0,
-                ADD COLUMN igst DECIMAL(15, 2) DEFAULT 0,
-                ADD COLUMN notes TEXT";
-        $pdo->exec($sql);
-        echo "Columns 'invoice_number', GST fields, notes added successfully to 'invoices'.<br>";
-    } else {
-        echo "GST Columns already exist in 'invoices'.<br>";
+    // Ensure all columns exist for existing invoices table
+    $columnsToAdd = [
+        'invoice_number' => "VARCHAR(100)",
+        'due_date' => "DATE",
+        'sub_total' => "DECIMAL(15, 2) DEFAULT 0",
+        'cgst' => "DECIMAL(15, 2) DEFAULT 0",
+        'sgst' => "DECIMAL(15, 2) DEFAULT 0",
+        'igst' => "DECIMAL(15, 2) DEFAULT 0",
+        'notes' => "TEXT",
+        'items' => "JSON"
+    ];
+
+    foreach ($columnsToAdd as $col => $definition) {
+        $stmt = $pdo->prepare("SHOW COLUMNS FROM invoices LIKE ?");
+        $stmt->execute([$col]);
+        if ($stmt->rowCount() == 0) {
+            $pdo->exec("ALTER TABLE invoices ADD COLUMN `$col` $definition");
+            echo "Column '$col' added successfully to 'invoices'.<br>";
+        }
     }
 
 }
