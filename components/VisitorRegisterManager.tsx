@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../src/services/api';
 import { BranchName, VisitorRegisterEntry } from '../types';
-import { Search, Plus, Edit, Trash2, ArrowLeft, Save, AlertCircle, MapPin, User, Phone, FileText, Calendar, X, Download } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, ArrowLeft, Save, AlertCircle, MapPin, User, Phone, FileText, Calendar, X, Download, RefreshCw } from 'lucide-react';
 import { ExcelImporter } from './ExcelImporter';
 
 interface VisitorRegisterManagerProps {
@@ -22,6 +22,7 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
     const [isLoading, setIsLoading] = useState(false);
     const isLoadingRef = React.useRef(false);
     const [detailEntry, setDetailEntry] = useState<VisitorRegisterEntry | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Debounce search
     useEffect(() => {
@@ -33,7 +34,7 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
     useEffect(() => {
         setVisitors([]);
         setOffset(0);
-    }, [debouncedSearch, selectedBranch]);
+    }, [debouncedSearch, selectedBranch, refreshTrigger]);
 
     // Load data whenever offset, search or branch changes
     useEffect(() => {
@@ -60,7 +61,7 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
         };
         load();
         return () => { cancelled = true; };
-    }, [offset, debouncedSearch, selectedBranch]);
+    }, [offset, debouncedSearch, selectedBranch, refreshTrigger]);
 
     const fetchData = () => {
         setVisitors([]);
@@ -148,6 +149,9 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
                             />
                             <button className="flex items-center gap-1 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-semibold hover:bg-amber-600 shadow-sm transition-all">
                                 <Download size={14} /> Export
+                            </button>
+                            <button onClick={() => setRefreshTrigger(prev => prev + 1)} className="p-1.5 text-slate-500 border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 transition-colors" title="Refresh records">
+                                <RefreshCw className={isLoading ? "animate-spin" : ""} size={16} />
                             </button>
                         </div>
                     </div>

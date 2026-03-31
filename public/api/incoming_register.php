@@ -173,11 +173,88 @@ switch ($method) {
                 ':payment_info' => isset($input['paymentInfo']) ? substr((string)$input['paymentInfo'], 0, 500) : null,
                 ':bill_status' => isset($input['billStatus']) ? substr((string)$input['billStatus'], 0, 50) : null,
                 ':purpose_narration' => isset($input['purposeNarration']) ? substr((string)$input['purposeNarration'], 0, 500) : null,
-                ':status' => isset($input['status']) ? substr((string)$input['status'], 0, 50) : 'Data Pending',
+                ':status' => isset($input['status']) ? substr((string)$input['status'], 0, 50) : 'Data Received',
                 ':remarks' => isset($input['remarks']) ? substr((string)$input['remarks'], 0, 1000) : null,
                 ':branch' => isset($input['branch']) ? substr((string)$input['branch'], 0, 100) : 'All Branches'
             ]);
-            echo json_encode(['message' => 'Entry created', 'id' => $input['id']]);
+
+            // AUTOMATION: Generate Invoice and Send Email if Bill Amount is provided
+            if ($billAmt > 0 && !empty($safeCustomer)) {
+                // 1. Fetch Client Details
+                $cStmt = $pdo->prepare("SELECT id, email FROM clients WHERE name = ? LIMIT 1");
+                $cStmt->execute([$safeCustomer]);
+                $client = $cStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($client) {
+                    $clientId = $client['id'];
+                    $clientEmail = $client['email'];
+
+                    // 2. Create Invoice Record
+                    $invId = 'INV-' . strtoupper(substr(uniqid(), -8));
+                    $invNum = 'INV/' . date('Y') . '/' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+                    
+                    $invSql = "INSERT INTO invoices (id, invoice_number, client_id, date, amount, status, items) 
+                               VALUES (:id, :invoice_number, :client_id, :date, :amount, 'Unpaid', :items)";
+                    $invStmt = $pdo->prepare($invSql);
+                    
+                    $items = [
+                        [
+                            'description' => 'Service Engagement: ' . ($input['serviceName'] ?? 'General Consult'),
+                            'quantity' => 1,
+                            'rate' => $billAmt,
+                            'amount' => $billAmt
+                        ]
+                    ];
+
+                    $invStmt->execute([
+                        ':id' => $invId,
+                        ':invoice_number' => $invNum,
+                        ':client_id' => $clientId,
+                        ':date' => $date,
+                        ':amount' => $billAmt,
+                        ':items' => json_encode($items)
+                    ]);
+
+                    // 3. Dispatch Emails
+                    require_once 'mail_utils.php';
+                    
+                    $emailSubject = "Engagement Confirmed & Invoice Raised - AVR Associates";
+                    $emailMessage = "
+                        <h3 style='font-size: 20px; font-weight: 800; margin-bottom: 16px;'>Engagement Confirmed</h3>
+                        <p>Thank you for choosing <span class='highlight'>AVR Associates</span>. We have successfully registered your new service request.</p>
+                        
+                        <div style='background: #f8fafc; padding: 24px; border-radius: 16px; margin: 24px 0; border: 1px solid #e2e8f0;'>
+                            <p style='margin: 0 0 10px;'><strong>Reference ID:</strong> " . $input['id'] . "</p>
+                            <p style='margin: 0 0 10px;'><strong>Service:</strong> " . ($input['serviceName'] ?? 'N/A') . "</p>
+                            <p style='margin: 0 0 10px;'><strong>Invoice No:</strong> <span class='highlight'>$invNum</span></p>
+                            <p style='margin: 0;'><strong>Total Amount:</strong> ₹" . number_format($billAmt, 2) . "</p>
+                        </div>
+                        
+                        <p>Our team has initiated the process. You can track the progress and download your official tax invoice from the portal.</p>
+                        
+                        <p style='text-align: center;'>
+                            <a href='https://avr-associates-erp.pages.dev' class='button'>Open Client Portal</a>
+                        </p>
+                    ";
+
+                    // Send to Client if email exists
+                    if (!empty($clientEmail)) {
+                        send_erp_email($clientEmail, $emailSubject, $emailMessage);
+                    }
+
+                    // Always send copy to Admin
+                    $adminSubject = "[ADMIN] New Engagement & Invoice: $safeCustomer";
+                    $adminMessage = "
+                        <p><strong>Client:</strong> $safeCustomer ($clientId)</p>
+                        <p><strong>Branch:</strong> " . ($input['branch'] ?? 'N/A') . "</p>
+                        <hr style='border: 0; border-top: 1px solid #eee; margin: 20px 0;'>
+                        $emailMessage
+                    ";
+                    send_erp_email('rajugariventures@gmail.com', $adminSubject, $adminMessage);
+                }
+            }
+
+            echo json_encode(['message' => 'Entry created and automation triggered', 'id' => $input['id']]);
         } catch (Throwable $e) {
             http_response_code(500);
             $msg = mb_convert_encoding($e->getMessage(), 'UTF-8', 'UTF-8');

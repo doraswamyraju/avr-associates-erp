@@ -5,9 +5,85 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query("SELECT id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by FROM clients ORDER BY name ASC");
-        $clients = $stmt->fetchAll();
-        echo json_encode($clients);
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+        $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+        $search = $_GET['search'] ?? '';
+        $branch = $_GET['branch'] ?? 'All Branches';
+        $status = $_GET['status'] ?? '';
+        $type = $_GET['type'] ?? '';
+
+        // Note: For backwards compatibility with dropdowns, if no limit is specifically requested and we just want all (or large number),
+        // we should still allow it. But the UI usually asks for simple lists without params vs specific views.
+        // If a request comes without limit, we'll just return all of them to not break existing staff/client dropdowns.
+        $isPaginated = isset($_GET['limit']) || isset($_GET['search']);
+
+        $sql = "SELECT id, name, pan, gstin, type, branch, phone, email, status, group_name, trade_name, dob, address, city, pincode, state, file_number, bank_account_no, bank_name, ifsc_code, refer_by, service_details FROM clients WHERE 1=1";
+        $countSql = "SELECT COUNT(*) FROM clients WHERE 1=1";
+        $params = [];
+
+        if ($branch !== 'All Branches') {
+            $sql .= " AND branch = :branch";
+            $countSql .= " AND branch = :branch";
+            $params[':branch'] = $branch;
+        }
+
+        if (!empty($status)) {
+            $sql .= " AND status = :status";
+            $countSql .= " AND status = :status";
+            $params[':status'] = $status;
+        }
+        
+        if (!empty($type)) {
+            $sql .= " AND type = :type";
+            $countSql .= " AND type = :type";
+            $params[':type'] = $type;
+        }
+
+        if (!empty($search)) {
+            $sql .= " AND (LOWER(name) LIKE :search OR LOWER(pan) LIKE :search OR LOWER(phone) LIKE :search OR LOWER(email) LIKE :search)";
+            $countSql .= " AND (LOWER(name) LIKE :search OR LOWER(pan) LIKE :search OR LOWER(phone) LIKE :search OR LOWER(email) LIKE :search)";
+            $params[':search'] = '%' . strtolower($search) . '%';
+        }
+
+        $sql .= " ORDER BY name ASC";
+        
+        if ($isPaginated) {
+            $sql .= " LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+        }
+
+        $stmt = $pdo->prepare($sql);
+        $countStmt = $pdo->prepare($countSql);
+        
+        foreach($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+            $countStmt->bindValue($k, $v);
+        }
+
+        try {
+            $stmt->execute();
+            $clients = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Un-JSON the service details for frontend consumption
+            foreach ($clients as &$c) {
+                if (!empty($c['service_details'])) {
+                    $c['serviceDetails'] = json_decode($c['service_details'], true);
+                } else {
+                    $c['serviceDetails'] = [];
+                }
+                unset($c['service_details']);
+            }
+
+            if ($isPaginated) {
+                $countStmt->execute();
+                $total = (int)$countStmt->fetchColumn();
+                echo json_encode(['data' => $clients, 'total' => $total]);
+            } else {
+                echo json_encode($clients);
+            }
+        } catch (PDOException $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
         break;
 
     case 'PUT':

@@ -6,7 +6,7 @@ import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
     Building, LayoutGrid, List, Landmark, MapPin, UserPlus,
-    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye, Download
+    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye, Download, RefreshCw
 } from 'lucide-react';
 import { generateInvoicePDF } from '../src/utils/pdfGenerator';
 
@@ -28,28 +28,63 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
     const [clientIdToEdit, setClientIdToEdit] = useState<Client | undefined>(undefined);
-    const [clients, setClients] = useState<Client[]>([]); // Initialize empty
+    const [clients, setClients] = useState<Client[]>([]);
+    const [totalClients, setTotalClients] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>('All');
-
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [showEngagementModal, setShowEngagementModal] = useState(false);
+    
+    const LIMIT = 20;
+    const [offset, setOffset] = useState(0);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+    // Debounce search
     useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchTerm), 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // Reset list when filters change
+    useEffect(() => {
+        setClients([]);
+        setOffset(0);
+    }, [debouncedSearch, selectedBranch, selectedServiceFilter, refreshTrigger]);
+
+    // Fetch clients
+    useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
         const fetchClients = async () => {
             try {
-                const data = await api.getClients();
-                setClients(data);
+                let typeFilter = undefined;
+                if (selectedServiceFilter === 'ROC') typeFilter = 'Company'; // Simplified approximation for ROC
+                
+                // If it's a specific GST filter or other, we search locally on the loaded batch for now 
+                // Alternatively we could add specific filter params to backend, but this natively loads 
+                // chunked subsets of 'All' based on name/phone search.
+                
+                const response = await api.getClients(LIMIT, offset, debouncedSearch, selectedBranch === BranchName.ALL ? undefined : selectedBranch, undefined, typeFilter);
+                if (cancelled) return;
+                
+                if (offset === 0) {
+                    setClients(response.data || []);
+                } else {
+                    setClients(prev => [...prev, ...(response.data || [])]);
+                }
+                setTotalClients(response.total || 0);
             } catch (err) {
-                setError('Failed to load clients');
+                if (!cancelled) setError('Failed to load clients');
                 console.error(err);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
         fetchClients();
-    }, []);
+        return () => { cancelled = true; };
+    }, [offset, debouncedSearch, selectedBranch, selectedServiceFilter, refreshTrigger]);
 
     useEffect(() => {
         if (quickAction === 'NEW_CLIENT') {
@@ -59,30 +94,31 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
     }, [quickAction, onQuickActionHandled]);
 
     const serviceCategories = [
-        { id: 'All', label: 'All Clients', icon: User, count: clients.length },
-        { id: 'GST', label: 'GST Compliance', icon: Briefcase, count: clients.filter(c => c.selectedServices?.some(s => s.includes('GST'))).length },
-        { id: 'INCOME TAX', label: 'Income Tax', icon: FileText, count: clients.filter(c => c.selectedServices?.includes('INCOME TAX')).length },
-        { id: 'TDS', label: 'TDS Filing', icon: CreditCard, count: clients.filter(c => c.selectedServices?.includes('TDS')).length },
-        { id: 'ROC', label: 'Company Law', icon: Building, count: clients.filter(c => c.type === 'Company' || c.type === 'LLP').length },
-        { id: 'TAX AUDIT', label: 'Tax Audits', icon: Shield, count: clients.filter(c => c.selectedServices?.includes('TAX AUDIT')).length },
+        { id: 'All', label: 'All Clients', icon: User },
+        { id: 'GST', label: 'GST Compliance', icon: Briefcase },
+        { id: 'INCOME TAX', label: 'Income Tax', icon: FileText },
+        { id: 'TDS', label: 'TDS Filing', icon: CreditCard },
+        { id: 'ROC', label: 'Company Law', icon: Building },
+        { id: 'TAX AUDIT', label: 'Tax Audits', icon: Shield },
     ];
 
     const filteredClients = clients.filter(client => {
-        const matchesBranch = selectedBranch === BranchName.ALL || client.branch === selectedBranch;
-        const matchesSearch = (client.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (client.pan || '').toLowerCase().includes(searchTerm.toLowerCase());
-
-        if (selectedServiceFilter !== 'All') {
-            if (selectedServiceFilter === 'ROC') {
-                if (!(client.type === 'Company' || client.type === 'LLP')) return false;
-            } else if (selectedServiceFilter === 'GST') {
+        if (selectedServiceFilter !== 'All' && selectedServiceFilter !== 'ROC') {
+            if (selectedServiceFilter === 'GST') {
                 if (!client.selectedServices?.some(s => s.includes('GST'))) return false;
             } else {
                 if (!client.selectedServices?.includes(selectedServiceFilter)) return false;
             }
         }
-        return matchesBranch && matchesSearch;
+        return true;
     });
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop <= clientHeight + 100 && clients.length < totalClients && !loading) {
+            setOffset(prev => prev + LIMIT);
+        }
+    };
 
     const handleBack = () => {
         setViewMode('directory');
@@ -261,7 +297,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                                 <button key={service.id} onClick={() => setSelectedServiceFilter(service.id)} className={`flex items-center gap-3 px-5 py-3 rounded-2xl border transition-all ${selectedServiceFilter === service.id ? `bg-slate-900 text-white border-slate-900 shadow-xl` : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300'}`}>
                                     <service.icon size={18} />
                                     <span className="font-black text-xs uppercase tracking-widest">{service.label}</span>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-lg font-black ${selectedServiceFilter === service.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{service.count}</span>
                                 </button>
                             ))}
                         </div>
@@ -273,7 +308,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 min-h-0 relative">
+            <div className="py-3 px-6 bg-slate-100 flex items-center justify-between border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-widest">
+                <span>Showing {clients.length} of {totalClients} profiles (Auto-loading)</span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 min-h-0 relative bg-slate-50" onScroll={handleScroll}>
                 {filteredClients.length > 0 ? (
                     directoryViewType === 'grid' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 pb-20">

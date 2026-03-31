@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../src/services/api';
 import { BranchName, IncomingRegisterEntry, Client, Staff } from '../types';
-import { Search, Plus, MapPin, Eye, Edit, Trash2, ArrowLeft, Save, AlertCircle } from 'lucide-react';
+import { Search, Plus, MapPin, Eye, Edit, Trash2, ArrowLeft, Save, AlertCircle, RefreshCw } from 'lucide-react';
 import { ExcelImporter } from './ExcelImporter';
 
 interface IncomingRegisterManagerProps {
@@ -9,9 +9,10 @@ interface IncomingRegisterManagerProps {
     quickAction?: string | null;
     onQuickActionHandled?: () => void;
     preSelectedClient?: string;
+    onNavigate?: (tab: string, params?: any) => void;
 }
 
-const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, preSelectedClient }) => {
+const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, preSelectedClient, onNavigate }) => {
     const [viewMode, setViewMode] = useState<'list' | 'add' | 'edit'>('list');
     const [editingRegister, setEditingRegister] = useState<IncomingRegisterEntry | null>(null);
     const [registers, setRegisters] = useState<IncomingRegisterEntry[]>([]);
@@ -24,6 +25,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const LIMIT = 20;
     const [offset, setOffset] = useState(0);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Debounce search
     useEffect(() => {
@@ -35,7 +37,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     useEffect(() => {
         setRegisters([]);
         setOffset(0);
-    }, [debouncedSearch, selectedBranch]);
+    }, [debouncedSearch, selectedBranch, refreshTrigger]);
 
     // Load data whenever offset, search or branch changes
     useEffect(() => {
@@ -67,7 +69,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
         };
         load();
         return () => { cancelled = true; };
-    }, [offset, debouncedSearch, selectedBranch]);
+    }, [offset, debouncedSearch, selectedBranch, refreshTrigger]);
 
     useEffect(() => { fetchDropdownData(); }, []);
 
@@ -82,7 +84,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     const fetchDropdownData = async () => {
         try {
             const [clientsData, staffData] = await Promise.all([api.getClients(), api.getStaff()]);
-            setClients(clientsData);
+            setClients(clientsData.data || clientsData); // support older and newer paginated returns safely
             setStaff(staffData);
         } catch (error) {
             console.error('Failed to fetch dropdowns:', error);
@@ -92,6 +94,7 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
     const fetchData = () => {
         setRegisters([]);
         setOffset(0);
+        setRefreshTrigger(prev => prev + 1);
     };
 
     const handleImportRegisters = async (data: any[]) => {
@@ -190,10 +193,17 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
                     stats={stats}
                     onEdit={(reg) => { setEditingRegister(reg); setViewMode('edit'); }}
                     onDelete={handleDelete}
+                    onRefresh={() => setRefreshTrigger(prev => prev + 1)}
                 />
             ) : (
                 <IncomingRegisterForm 
-                    onCancel={() => setViewMode('list')} 
+                    onCancel={() => {
+                        if (quickAction === 'NEW_INCOMING' && preSelectedClient && onNavigate) {
+                            onNavigate('clients');
+                        } else {
+                            setViewMode('list');
+                        }
+                    }} 
                     onSuccess={() => { setViewMode('list'); fetchData(); }}
                     clients={clients}
                     staff={staff}
@@ -222,7 +232,8 @@ const IncomingRegisterList: React.FC<{
     stats: { dataReceived: number, wip: number, completed: number },
     onEdit: (reg: IncomingRegisterEntry) => void,
     onDelete: (id: string) => void,
-}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, loaded, onLoadMore, canLoadMore, stats, onEdit, onDelete }) => {
+    onRefresh: () => void,
+}> = ({ registers, searchTerm, setSearchTerm, selectedBranch, onAddNew, isLoading, onImport, totalRegisters, loaded, onLoadMore, canLoadMore, stats, onEdit, onDelete, onRefresh }) => {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
@@ -251,6 +262,9 @@ const IncomingRegisterList: React.FC<{
                                 onImport={onImport}
                             />
                             <button className="px-3 py-1.5 bg-orange-400 text-white rounded text-sm shadow-sm hover:bg-orange-500">Print Incoming</button>
+                            <button onClick={onRefresh} className="p-1.5 text-slate-500 border border-slate-300 rounded shadow-sm hover:bg-slate-50 transition-colors" title="Refresh list">
+                                <RefreshCw className={isLoading ? "animate-spin" : ""} size={16} />
+                            </button>
                         </div>
                     </div>
                     <div className="text-sm text-slate-700">

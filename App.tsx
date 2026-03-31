@@ -136,7 +136,7 @@ const App: React.FC = () => {
       case 'clients':
         return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} onNavigate={handleNavigation} />;
       case 'tasks':
-        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} />;
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
       case 'billing':
         return <BillingManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       case 'compliance':
@@ -150,7 +150,7 @@ const App: React.FC = () => {
       case 'branches':
         return <BranchManager />;
       case 'incoming':
-        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} />;
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
       case 'visitors':
         return <VisitorRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       default:

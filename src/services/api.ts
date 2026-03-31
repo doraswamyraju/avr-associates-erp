@@ -58,8 +58,17 @@ export const api = {
     },
 
     // Clients
-    getClients: async (): Promise<Client[]> => {
-        const response = await fetch(`${API_BASE_URL}/clients.php`);
+    getClients: async (limit?: number, offset?: number, search?: string, branch?: string, status?: string, type?: string): Promise<any> => {
+        const params = new URLSearchParams();
+        if (limit !== undefined) params.append('limit', limit.toString());
+        if (offset !== undefined) params.append('offset', offset.toString());
+        if (search) params.append('search', search);
+        if (branch) params.append('branch', branch);
+        if (status) params.append('status', status);
+        if (type) params.append('type', type);
+
+        const url = `${API_BASE_URL}/clients.php${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch clients');
         return response.json();
     },
