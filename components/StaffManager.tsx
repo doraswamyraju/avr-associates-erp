@@ -40,9 +40,9 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
                 api.getStaff(),
                 api.getTasks()
             ]);
-            // Filter to only show Admin and Employee roles for this view
+            // Show all staff who are NOT explicitly clients
             const organizationalStaff = staffData.filter(s => 
-                s.role.toLowerCase() === 'admin' || s.role.toLowerCase() === 'employee' || s.role.toLowerCase() === 'staff'
+                s.role.toLowerCase() !== 'client'
             );
             setStaffList(organizationalStaff);
             setTasks(tasksData);
@@ -118,8 +118,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 overflow-hidden font-sans">
-            <div className="p-8 pb-4 shrink-0">
+        <div className="flex-1 bg-slate-50 overflow-y-auto font-sans pb-20">
+            <div className="p-8 pb-4">
                 <div className="flex justify-between items-end mb-8">
                     <div>
                         <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-1">VR Hero Admin Panel</p>
@@ -217,7 +217,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
             </div>
 
             {/* User Table Part */}
-            <div className="flex-1 overflow-x-auto px-8 min-h-0">
+            <div className="px-8">
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-slate-50/50 border-b border-slate-100">
@@ -328,11 +328,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
                     </div>
                 </div>
             </div>
-            
-            {/* FAB for mobile or quick actions */}
-            <button className="fixed bottom-10 right-10 w-16 h-16 bg-indigo-600 text-white rounded-[2rem] shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-10">
-                <Plus size={32} strokeWidth={2.5} />
-            </button>
         </div>
     );
 };
