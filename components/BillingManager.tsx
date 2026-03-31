@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_CLIENTS } from '../constants';
 import { BranchName, Invoice, InvoiceItem, Client } from '../types';
-import { IndianRupee, Download, FileText, Check, AlertCircle, Plus, X, Trash2 } from 'lucide-react';
+import { IndianRupee, Download, FileText, Check, AlertCircle, Plus, X, Trash2, Search } from 'lucide-react';
 import { api } from '../src/services/api';
 import { generateInvoicePDF } from '../src/utils/pdfGenerator';
 
@@ -152,6 +152,9 @@ const AddInvoiceModal: React.FC<{ clients: Client[], onClose: () => void, onAdd:
         notes: ''
     });
 
+    const [clientSearch, setClientSearch] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     const [items, setItems] = useState<InvoiceItem[]>([{
         id: Math.random().toString(),
         description: '',
@@ -220,13 +223,56 @@ const AddInvoiceModal: React.FC<{ clients: Client[], onClose: () => void, onAdd:
                 <form onSubmit={handleSubmit} className="p-6 flex-1 overflow-y-auto space-y-6">
                     {/* Header Info */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
+                        <div className="relative">
                             <label className="block text-xs font-black uppercase text-slate-400 tracking-widest mb-2">Billed To (Client) *</label>
-                            <select required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
-                                value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})}>
-                                <option value="">-- Choose Client --</option>
-                                {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.type})</option>)}
-                            </select>
+                            <div className="relative">
+                                <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input 
+                                    required
+                                    type="text"
+                                    placeholder="Search client name..."
+                                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={clientSearch}
+                                    onChange={e => {
+                                        setClientSearch(e.target.value);
+                                        setShowSuggestions(true);
+                                        if (e.target.value === '') setFormData({...formData, clientId: ''});
+                                    }}
+                                    onFocus={() => setShowSuggestions(true)}
+                                />
+                                {showSuggestions && clientSearch.length > 0 && (
+                                    <div className="absolute z-[60] left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                        {clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).length > 0 ? (
+                                            clients.filter(c => c.name.toLowerCase().includes(clientSearch.toLowerCase())).map(c => (
+                                                <button
+                                                    key={c.id}
+                                                    type="button"
+                                                    className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors flex flex-col border-b border-slate-50 last:border-0"
+                                                    onClick={() => {
+                                                        setFormData({...formData, clientId: c.id});
+                                                        setClientSearch(c.name);
+                                                        setShowSuggestions(false);
+                                                    }}
+                                                >
+                                                    <span className="font-bold text-slate-800 text-sm">{c.name}</span>
+                                                    <span className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{c.type} • {c.branch}</span>
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-6 text-center">
+                                                <p className="text-sm text-slate-400 font-bold">No clients found</p>
+                                                <button 
+                                                    type="button"
+                                                    className="mt-2 text-xs text-indigo-600 font-black uppercase tracking-widest hover:underline"
+                                                    onClick={() => setShowSuggestions(false)}
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div>
                             <label className="block text-xs font-black uppercase text-slate-400 tracking-widest mb-2">Invoice Date *</label>

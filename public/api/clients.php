@@ -40,9 +40,13 @@ switch ($method) {
         }
 
         if (!empty($search)) {
-            $sql .= " AND (LOWER(name) LIKE :search OR LOWER(pan) LIKE :search OR LOWER(phone) LIKE :search OR LOWER(email) LIKE :search)";
-            $countSql .= " AND (LOWER(name) LIKE :search OR LOWER(pan) LIKE :search OR LOWER(phone) LIKE :search OR LOWER(email) LIKE :search)";
-            $params[':search'] = '%' . strtolower($search) . '%';
+            $sql .= " AND (LOWER(name) LIKE :s1 OR LOWER(pan) LIKE :s2 OR LOWER(phone) LIKE :s3 OR LOWER(email) LIKE :s4)";
+            $countSql .= " AND (LOWER(name) LIKE :s1 OR LOWER(pan) LIKE :s2 OR LOWER(phone) LIKE :s3 OR LOWER(email) LIKE :s4)";
+            $searchVal = '%' . strtolower($search) . '%';
+            $params[':s1'] = $searchVal;
+            $params[':s2'] = $searchVal;
+            $params[':s3'] = $searchVal;
+            $params[':s4'] = $searchVal;
         }
 
         $sql .= " ORDER BY name ASC";
