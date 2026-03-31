@@ -277,28 +277,28 @@ const IncomingRegisterList: React.FC<{
             </div>
 
             <div className="flex-1 overflow-y-auto relative bg-white" onScroll={handleScroll}>
-                <div className="min-w-max border-b border-slate-200 pb-10">
+                <div className="w-full border-b border-slate-200 pb-10">
                     <table className="w-full text-left text-xs">
                         <thead className="bg-white text-slate-700 font-bold border-b border-slate-200">
                             <tr>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Period</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Ref.Code</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Client Name</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Staff Name</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Documents</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">service</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Verified By</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Reference No</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Entry Date</th>
-                                <th className="px-3 py-3 border-r border-slate-100 text-red-500 whitespace-nowrap">Due Date</th>
-                                <th className="px-3 py-3 border-r border-slate-100 text-red-500 whitespace-nowrap">Completed Date</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Bill status</th>
-                                <th className="px-3 py-3 border-r border-slate-100 whitespace-nowrap">Status</th>
-                                <th className="px-3 py-3 text-center whitespace-nowrap">OPtions</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Period</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Ref.Code</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Client Name</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Staff Name</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Documents</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Service</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Verified By</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Reference No</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Entry Date</th>
+                                <th className="px-3 py-3 border-r border-slate-100 text-red-500">Due Date</th>
+                                <th className="px-3 py-3 border-r border-slate-100 text-red-500">Completed Date</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Bill Status</th>
+                                <th className="px-3 py-3 border-r border-slate-100">Status</th>
+                                <th className="px-3 py-3 text-center">Options</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {isLoading ? (
+                            {isLoading && registers.length === 0 ? (
                                 <tr><td colSpan={14} className="px-6 py-8 text-center text-slate-400 font-medium">Loading register data...</td></tr>
                             ) : registers.length === 0 ? (
                                 <tr><td colSpan={14} className="px-6 py-8 text-center text-slate-400 font-medium">No records found.</td></tr>
