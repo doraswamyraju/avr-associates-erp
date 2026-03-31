@@ -138,8 +138,8 @@ try {
     ];
 
     foreach ($columnsToAdd as $col => $definition) {
-        $stmt = $pdo->prepare("SHOW COLUMNS FROM invoices LIKE ?");
-        $stmt->execute([$col]);
+        // Some MySQL versions don't support placeholders in SHOW statements
+        $stmt = $pdo->query("SHOW COLUMNS FROM invoices LIKE '$col'");
         if ($stmt->rowCount() == 0) {
             $pdo->exec("ALTER TABLE invoices ADD COLUMN `$col` $definition");
             echo "Column '$col' added successfully to 'invoices'.<br>";
