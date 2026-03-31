@@ -1,3 +1,5 @@
+<?php
+
 /**
  * Robust SMTP Email Sender
  * Directly communicates with smtp.gmail.com without extra library requirements.
