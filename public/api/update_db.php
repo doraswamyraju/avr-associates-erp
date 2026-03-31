@@ -7,7 +7,7 @@ try {
     $stmt->execute();
 
     if ($stmt->rowCount() == 0) {
-        $sql = "ALTER TABLE clients ADD COLUMN service_details JSON";
+        $sql = "ALTER TABLE clients ADD COLUMN service_details TEXT";
         $pdo->exec($sql);
         echo "Column 'service_details' added successfully.<br>";
     }
