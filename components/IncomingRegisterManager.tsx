@@ -278,23 +278,23 @@ const IncomingRegisterList: React.FC<{
 
             <div className="flex-1 overflow-y-auto relative bg-white" onScroll={handleScroll}>
                 <div className="w-full border-b border-slate-200 pb-10">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-[11px]">
                         <thead className="bg-white text-slate-700 font-bold border-b border-slate-200">
                             <tr>
-                                <th className="px-3 py-3 border-r border-slate-100">Period</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Ref.Code</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Client Name</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Staff Name</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Documents</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Service</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Verified By</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Reference No</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Entry Date</th>
-                                <th className="px-3 py-3 border-r border-slate-100 text-red-500">Due Date</th>
-                                <th className="px-3 py-3 border-r border-slate-100 text-red-500">Completed Date</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Bill Status</th>
-                                <th className="px-3 py-3 border-r border-slate-100">Status</th>
-                                <th className="px-3 py-3 text-center">Options</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Period</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Ref.Code</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Client Name</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Staff Name</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Documents</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Service</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Verified By</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Ref No</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Entry Date</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100 text-red-500">Due Date</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100 text-red-500">Done Date</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Bill Sts</th>
+                                <th className="px-1.5 py-2 border-r border-slate-100">Status</th>
+                                <th className="px-1.5 py-2 text-center">Options</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -304,38 +304,38 @@ const IncomingRegisterList: React.FC<{
                                 <tr><td colSpan={14} className="px-6 py-8 text-center text-slate-400 font-medium">No records found.</td></tr>
                             ) : registers.map(reg => (
                                 <tr key={reg.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[120px]" title={reg.period1}>{reg.period1 || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100">{reg.referenceCode || reg.id}</td>
-                                    <td className="px-3 py-3 text-slate-700 border-r border-slate-100 uppercase truncate max-w-[200px]" title={reg.customerName}>{reg.customerName || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[100px]">{reg.staffName || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 uppercase truncate max-w-[200px]" title={reg.incomingDocuments}>{reg.incomingDocuments || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[150px]">{reg.serviceName || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[100px]">{reg.verifiedBy || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 truncate max-w-[150px]">{reg.arnRefNo || '-'}</td>
-                                    <td className="px-3 py-3 text-slate-600 border-r border-slate-100 whitespace-nowrap">{reg.date}</td>
-                                    <td className="px-3 py-3 text-red-500 border-r border-slate-100 whitespace-nowrap">{reg.dueDate || '-'}</td>
-                                    <td className="px-3 py-3 text-red-500 border-r border-slate-100 whitespace-nowrap">{reg.completedDate || '-'}</td>
-                                    <td className="px-3 py-3 border-r border-slate-100">
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 truncate max-w-[70px]" title={reg.period1}>{reg.period1 || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 truncate max-w-[60px]" title={reg.referenceCode || reg.id}>{reg.referenceCode || reg.id}</td>
+                                    <td className="px-1.5 py-2 text-slate-700 border-r border-slate-100 uppercase truncate max-w-[120px]" title={reg.customerName}>{reg.customerName || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 truncate max-w-[60px]">{reg.staffName || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 uppercase truncate max-w-[120px]" title={reg.incomingDocuments}>{reg.incomingDocuments || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 truncate max-w-[100px]">{reg.serviceName || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 truncate max-w-[60px]">{reg.verifiedBy || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 truncate max-w-[80px]" title={reg.arnRefNo}>{reg.arnRefNo || '-'}</td>
+                                    <td className="px-1.5 py-2 text-slate-600 border-r border-slate-100 whitespace-nowrap">{reg.date}</td>
+                                    <td className="px-1.5 py-2 text-red-500 border-r border-slate-100 whitespace-nowrap">{reg.dueDate || '-'}</td>
+                                    <td className="px-1.5 py-2 text-red-500 border-r border-slate-100 whitespace-nowrap">{reg.completedDate || '-'}</td>
+                                    <td className="px-1.5 py-2 border-r border-slate-100">
                                         {reg.billStatus ? (
-                                            <span className={`px-2 py-1 text-[10px] font-bold rounded ${
+                                            <span className={`px-1 py-0.5 text-[9px] font-bold rounded ${
                                                 reg.billStatus.toLowerCase() === 'paid' ? 'bg-emerald-500 text-white' :
                                                 reg.billStatus.toLowerCase() === 'unpaid' ? 'bg-red-500 text-white' :
                                                 'bg-amber-500 text-white'
                                             }`}>{reg.billStatus}</span>
                                         ) : '-'}
                                     </td>
-                                    <td className="px-3 py-3 border-r border-slate-100">
-                                        <span className={`px-2 py-1 text-[10px] font-bold rounded ${
+                                    <td className="px-1.5 py-2 border-r border-slate-100">
+                                        <span className={`px-1 py-0.5 text-[9px] font-bold rounded ${
                                             reg.status === 'Completed' ? 'bg-emerald-500 text-white' :
-                                            reg.status === 'Work In Progress' ? 'bg-emerald-500 text-white' :
+                                            reg.status === 'Work In Progress' ? 'bg-indigo-500 text-white' :
                                             reg.status === 'Data Pending' ? 'bg-amber-500 text-white' :
                                             'bg-slate-500 text-white'
-                                        }`}>{reg.status}</span>
+                                        }`}>{reg.status === 'Work In Progress' ? 'WIP' : reg.status === 'Data Pending' ? 'Pending' : reg.status}</span>
                                     </td>
-                                    <td className="px-3 py-3 text-center border-r border-slate-100">
-                                        <div className="flex items-center justify-center gap-1.5">
-                                            <button onClick={() => onEdit(reg)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors" title="Edit"><Edit size={14} /></button>
-                                            <button onClick={() => onDelete(reg.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                                    <td className="px-1.5 py-2 text-center border-r border-slate-100">
+                                        <div className="flex items-center justify-center gap-1">
+                                            <button onClick={() => onEdit(reg)} className="p-0.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Edit"><Edit size={12} /></button>
+                                            <button onClick={() => onDelete(reg.id)} className="p-0.5 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 size={12} /></button>
                                         </div>
                                     </td>
                                 </tr>
