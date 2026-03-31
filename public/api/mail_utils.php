@@ -1,123 +1,100 @@
-<?php
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
-
-// Path to PHPMailer files
-$phpmailer_path = __DIR__ . '/libs/PHPMailer/';
-if (file_exists($phpmailer_path . 'PHPMailer.php')) {
-    require_once $phpmailer_path . 'Exception.php';
-    require_once $phpmailer_path . 'PHPMailer.php';
-    require_once $phpmailer_path . 'SMTP.php';
-}
-
 /**
- * Utility function to send emails.
- * Using PHPMailer with Gmail SMTP for reliability.
+ * Robust SMTP Email Sender
+ * Directly communicates with smtp.gmail.com without extra library requirements.
  */
 function send_erp_email($to, $subject, $message) {
-    // If PHPMailer is not available, fallback to basic mail() and log it
-    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
-        $headers = "MIME-Version: 1.0" . "\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-        $headers .= "From: AVR Associates <rajugariventures@gmail.com>" . "\r\n";
-        $html = "<html><body><div style='font-family: sans-serif;'>$message</div></body></html>";
-        
-        $log_file = __DIR__ . '/../mail_log.txt';
-        file_put_contents($log_file, "[" . date('Y-m-d H:i:s') . "] FALLBACK TO mail(): TO: $to | SUBJECT: $subject\n", FILE_APPEND);
-        return @mail($to, $subject, $html, $headers);
+    $user = 'rajugariventures@gmail.com';
+    $pass = 'vsyndrgwqprwtkgo';
+    $host = 'smtp.gmail.com';
+    $port = 587;
+    $from = 'rajugariventures@gmail.com';
+
+    $html_template = "
+    <html>
+    <head>
+        <style>
+            body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.6; background-color: #f8fafc; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
+            .header { background: #4f46e5; color: white; padding: 40px 20px; text-align: center; }
+            .content { padding: 40px; }
+            .footer { padding: 30px; text-align: center; font-size: 12px; color: #94a3b8; background-color: #f1f5f9; }
+            .button { display: inline-block; padding: 14px 28px; background: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: bold; margin-top: 24px; }
+            .highlight { color: #4f46e5; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class='container'>
+            <div class='header'><h1 style='margin:0;'>AVR ASSOCIATES</h1></div>
+            <div class='content'>$message</div>
+            <div class='footer'>&copy; " . date('Y') . " AVR Associates & Co.</div>
+        </div>
+    </body>
+    </html>";
+
+    $timeout = 10;
+    $socket = fsockopen($host, $port, $errno, $errstr, $timeout);
+    if (!$socket) return false;
+
+    function smtp_resp($socket) {
+        $response = "";
+        while ($str = fgets($socket, 515)) {
+            $response .= $str;
+            if (substr($str, 3, 1) == " ") break;
+        }
+        return $response;
     }
 
-    $mail = new PHPMailer(true);
+    smtp_resp($socket); // read 220
+    fwrite($socket, "EHLO " . $_SERVER['HTTP_HOST'] . "\r\n");
+    smtp_resp($socket);
+    
+    fwrite($socket, "STARTTLS\r\n");
+    smtp_resp($socket);
+    stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
 
-    try {
-        // Server settings
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        // User provided credentials
-        $mail->Username   = 'rajugariventures@gmail.com';
-        $mail->Password   = 'vsyndrgwqprwtkgo';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
+    fwrite($socket, "EHLO " . $_SERVER['HTTP_HOST'] . "\r\n");
+    smtp_resp($socket);
 
-        // Recipients
-        $mail->setFrom('rajugariventures@gmail.com', 'AVR Associates ERP');
-        if (is_array($to)) {
-            foreach($to as $address) $mail->addAddress($address);
-        } else {
-            $mail->addAddress($to);
-        }
+    fwrite($socket, "AUTH LOGIN\r\n");
+    smtp_resp($socket);
+    fwrite($socket, base64_encode($user) . "\r\n");
+    smtp_resp($socket);
+    fwrite($socket, base64_encode($pass) . "\r\n");
+    $auth = smtp_resp($socket);
 
-        // Content
-        $mail->isHTML(true);
-        $mail->Subject = $subject;
-        
-        $html_template = "
-        <html>
-        <head>
-            <style>
-                body { font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.6; background-color: #f8fafc; }
-                .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
-                .header { background: #4f46e5; color: white; padding: 40px 20px; text-align: center; }
-                .content { padding: 40px; }
-                .footer { padding: 30px; text-align: center; font-size: 12px; color: #94a3b8; background-color: #f1f5f9; }
-                .button { display: inline-block; padding: 14px 28px; background: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: bold; margin-top: 24px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
-                .highlight { color: #4f46e5; font-weight: bold; }
-            </style>
-        </head>
-        <body>
-            <div class='container'>
-                <div class='header'>
-                    <h1 style='margin:0; font-size: 24px; letter-spacing: -0.025em; font-weight: 800;'>AVR ASSOCIATES</h1>
-                    <p style='margin:5px 0 0; opacity: 0.8; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;'>ERP Ecosystem</p>
-                </div>
-                <div class='content'>
-                    $message
-                </div>
-                <div class='footer'>
-                    <p>&copy; " . date('Y') . " AVR Associates & Co. All rights reserved.</p>
-                    <p>Ravulapalem | Hyderabad | Bangalore</p>
-                </div>
-            </div>
-        </body>
-        </html>
-        ";
-        
-        $mail->Body = $html_template;
-        $mail->send();
-
-        // Log sucess
-        $log_file = __DIR__ . '/../mail_log.txt';
-        file_put_contents($log_file, "[" . date('Y-m-d H:i:s') . "] SMTP SUCCESS: TO: " . (is_array($to) ? implode(',', $to) : $to) . " | SUBJECT: $subject\n", FILE_APPEND);
-        
-        return true;
-    } catch (Exception $e) {
-        $log_file = __DIR__ . '/../mail_log.txt';
-        file_put_contents($log_file, "[" . date('Y-m-d H:i:s') . "] SMTP ERROR: {$mail->ErrorInfo}\n", FILE_APPEND);
+    if (strpos($auth, '235') === false) {
+        fclose($socket);
         return false;
     }
+
+    $to_list = is_array($to) ? $to : [$to];
+    foreach($to_list as $recipient) {
+        fwrite($socket, "MAIL FROM: <$from>\r\n");
+        smtp_resp($socket);
+        fwrite($socket, "RCPT TO: <$recipient>\r\n");
+        smtp_resp($socket);
+        fwrite($socket, "DATA\r\n");
+        smtp_resp($socket);
+
+        $headers = "MIME-Version: 1.0\r\n";
+        $headers .= "Content-type: text/html; charset=UTF-8\r\n";
+        $headers .= "To: $recipient\r\n";
+        $headers .= "From: AVR Associates <$from>\r\n";
+        $headers .= "Subject: $subject\r\n";
+        $headers .= "Date: " . date('r') . "\r\n";
+
+        fwrite($socket, $headers . "\r\n" . $html_template . "\r\n.\r\n");
+        smtp_resp($socket);
+    }
+
+    fwrite($socket, "QUIT\r\n");
+    fclose($socket);
+    return true;
 }
 
 function send_welcome_email($to, $name, $username, $reset_token) {
-    $reset_link = "http://" . $_SERVER['HTTP_HOST'] . "/?action=reset&token=" . $reset_token;
-    
-    $subject = "Welcome to AVR Associates ERP Ecosystem";
-    $message = "
-        <h3 style='font-size: 20px; font-weight: 800; margin-bottom: 16px;'>Hello $name,</h3>
-        <p>A new account has been created for you in the <span class='highlight'>AVR Associates ERP</span> system.</p>
-        <div style='background: #f8fafc; padding: 20px; border-radius: 16px; margin: 24px 0; border: 1px solid #e2e8f0;'>
-            <p style='margin:0;'><strong>Username:</strong> $username</p>
-        </div>
-        <p>Before you can log in, you must set your password by clicking the button below:</p>
-        <p style='text-align: center;'>
-            <a href='$reset_link' class='button'>Set Your Password</a>
-        </p>
-        <p style='margin-top: 24px; font-size: 13px; color: #64748b;'>This link will expire in 24 hours. If you didn't expect this, please contact support.</p>
-    ";
-    
-    return send_erp_email($to, $subject, $message);
+    $reset_link = "https://" . $_SERVER['HTTP_HOST'] . "/?action=reset&token=" . $reset_token;
+    return send_erp_email($to, "Welcome to AVR Associates", "<p>Hello $name,</p><p>Your username is: $username</p><p><a href='$reset_link' class='button'>Set Password</a></p>");
 }
 
 function send_password_reset_email($to, $name, $reset_token) {
