@@ -38,21 +38,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
             />
 
             {/* Sidebar */}
-            <div className={`fixed lg:static inset-y-0 left-0 z-30 w-64 bg-slate-900 text-white transform transition-transform duration-200 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 flex flex-col h-full shadow-xl`}>
+            <div className={`fixed lg:static inset-y-0 left-0 z-30 bg-slate-900 text-white transform transition-all duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 flex flex-col h-full shadow-2xl overflow-hidden group w-64 lg:w-20 lg:hover:w-64`}>
                 
                 {/* Logo Area */}
-                <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-800 bg-slate-900">
-                    <div className="p-1.5 bg-indigo-600 rounded-lg">
-                        <Shield size={20} className="text-white" />
+                <div className="h-16 flex items-center gap-4 px-6 border-b border-slate-800 bg-slate-900 shrink-0 whitespace-nowrap">
+                    <div className="p-2 bg-indigo-600 rounded-lg shrink-0 flex items-center justify-center">
+                        <Shield size={18} className="text-white" />
                     </div>
-                    <div>
-                        <h1 className="font-bold text-lg tracking-tight">AVR Associates</h1>
-                        <p className="text-slate-400 text-[10px] uppercase tracking-wider">ERP System</p>
+                    <div className="transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100 flex flex-col justify-center">
+                        <h1 className="font-bold text-base tracking-tight leading-tight">AVR Associates</h1>
+                        <p className="text-slate-400 text-[9px] uppercase tracking-wider leading-tight">ERP System</p>
                     </div>
                 </div>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+                <nav className="flex-1 py-6 px-3 lg:px-4 space-y-1.5 overflow-y-auto overflow-x-hidden">
                     {visibleItems.map(item => (
                         <button
                             key={item.id}
@@ -60,28 +60,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
                                 setActiveTab(item.id);
                                 setIsOpen(false);
                             }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                            className={`w-full flex items-center gap-4 px-3 lg:px-3 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                                 activeTab === item.id 
                                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/20' 
                                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
                             }`}
                         >
-                            <item.icon size={18} />
-                            {item.label}
+                            <item.icon size={18} className="shrink-0 ml-0.5" />
+                            <span className="transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100">{item.label}</span>
                         </button>
                     ))}
                 </nav>
 
                 {/* Footer / Logout */}
-                <div className="p-4 border-t border-slate-800">
+                <div className="p-4 border-t border-slate-800 whitespace-nowrap">
                     <button 
                         onClick={onLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
+                        className="w-full flex items-center gap-4 px-3 lg:px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors"
                     >
-                        <LogOut size={18} />
-                        Sign Out
+                        <LogOut size={18} className="shrink-0 ml-0.5" />
+                        <span className="transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100">Sign Out</span>
                     </button>
-                    <p className="text-[10px] text-center text-slate-600 mt-4">v1.0.3 • © 2024 AVR</p>
+                    <p className="text-[10px] text-center text-slate-600 mt-4 transition-opacity duration-300 lg:opacity-0 lg:group-hover:opacity-100">v1.0.3 • © 2024 AVR</p>
                 </div>
             </div>
         </>
