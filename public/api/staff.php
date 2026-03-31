@@ -22,6 +22,8 @@ switch ($method) {
                 'branch' => $s['branch'],
                 'avatarUrl' => $s['avatar_url'],
                 'email' => $s['email'],
+                'phone' => $s['phone'] ?? '',
+                'status' => $s['status'] ?? 'Active',
                 'isClockedIn' => (bool)$s['is_clocked_in'],
                 'hourlyRate' => (float)$s['hourly_rate'],
                 'mtdTrackedHours' => (float)$s['mtd_tracked_hours']
@@ -46,14 +48,16 @@ switch ($method) {
 
             $id = $data['id'] ?? ('S' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT));
             $email = $data['email'] ?? null;
+            $phone = $data['phone'] ?? null;
+            $status = $data['status'] ?? 'Active';
             
             // Generate token for password setting
             $resetToken = bin2hex(random_bytes(32));
             $tokenExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
             // Insert into staff table
-            $sqlStaff = "INSERT INTO staff (id, name, role, branch, avatar_url, email, is_clocked_in, hourly_rate, mtd_tracked_hours) 
-                        VALUES (:id, :name, :role, :branch, :avatar_url, :email, :is_clocked_in, :hourly_rate, :mtd_tracked_hours)";
+            $sqlStaff = "INSERT INTO staff (id, name, role, branch, avatar_url, email, phone, status, is_clocked_in, hourly_rate, mtd_tracked_hours) 
+                        VALUES (:id, :name, :role, :branch, :avatar_url, :email, :phone, :status, :is_clocked_in, :hourly_rate, :mtd_tracked_hours)";
             
             $stmtStaff = $pdo->prepare($sqlStaff);
             $stmtStaff->execute([
@@ -63,18 +67,19 @@ switch ($method) {
                 ':branch' => $data['branch'] ?? 'Ravulapalem',
                 ':avatar_url' => $data['avatarUrl'] ?? "https://ui-avatars.com/api/?name=" . urlencode($data['name']) . "&background=random&bold=true",
                 ':email' => $email,
+                ':phone' => $phone,
+                ':status' => $status,
                 ':is_clocked_in' => 0,
                 ':hourly_rate' => $data['hourlyRate'] ?? 200,
                 ':mtd_tracked_hours' => 0
             ]);
 
             // Insert into users table for login
-            // Use a temporary random password if none provided, but reset_token is what matters
             $tempPassword = bin2hex(random_bytes(8));
             $passwordHash = password_hash($data['password'] ?? $tempPassword, PASSWORD_DEFAULT);
             
-            $sqlUser = "INSERT INTO users (id, username, password_hash, name, role, avatar, branch, email, reset_token, token_expiry) 
-                        VALUES (:id, :username, :password_hash, :name, 'Employee', :avatar, :branch, :email, :reset_token, :token_expiry)";
+            $sqlUser = "INSERT INTO users (id, username, password_hash, name, role, avatar, branch, email, phone, status, reset_token, token_expiry) 
+                        VALUES (:id, :username, :password_hash, :name, :role, :avatar, :branch, :email, :phone, :status, :reset_token, :token_expiry)";
             
             $stmtUser = $pdo->prepare($sqlUser);
             $stmtUser->execute([
@@ -82,9 +87,12 @@ switch ($method) {
                 ':username' => $data['username'],
                 ':password_hash' => $passwordHash,
                 ':name' => $data['name'],
+                ':role' => $data['role'] ?? 'Employee',
                 ':avatar' => $data['avatarUrl'] ?? null,
                 ':branch' => $data['branch'] ?? 'Ravulapalem',
                 ':email' => $email,
+                ':phone' => $phone,
+                ':status' => $status,
                 ':reset_token' => $resetToken,
                 ':token_expiry' => $tokenExpiry
             ]);

@@ -145,6 +145,18 @@ try {
         }
     }
 
+    // Add phone to users and staff
+    $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'phone'");
+    if ($stmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN phone VARCHAR(20)");
+        echo "Column 'phone' added to 'users'.<br>";
+    }
+    $stmt = $pdo->query("SHOW COLUMNS FROM staff LIKE 'phone'");
+    if ($stmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE staff ADD COLUMN phone VARCHAR(20)");
+        echo "Column 'phone' added to 'staff'.<br>";
+    }
+
 }
 catch (PDOException $e) {
     echo "Error: " . $e->getMessage();

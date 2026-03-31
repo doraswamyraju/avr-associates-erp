@@ -54,6 +54,18 @@ export const api = {
                 throw new Error(errorData.error || 'Invalid token');
             }
             return response.json();
+        },
+        adminSendResetLink: async (userId: string): Promise<any> => {
+            const response = await fetch(`${API_BASE_URL}/auth.php?action=admin_send_reset`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to send reset link');
+            }
+            return response.json();
         }
     },
 

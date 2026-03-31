@@ -29,6 +29,9 @@ switch ($action) {
     case 'verify_token':
         handleVerifyToken($pdo, $data);
         break;
+    case 'admin_send_reset':
+        handleAdminSendReset($pdo, $data);
+        break;
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Invalid action']);
@@ -161,6 +164,40 @@ function handleVerifyToken($pdo, $data) {
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'error: ' . $e->getMessage()]);
+    }
+}
+
+function handleAdminSendReset($pdo, $data) {
+    if (!isset($data['userId'])) {
+        http_response_code(400);
+        echo json_encode(['error' => 'User ID is required']);
+        exit;
+    }
+
+    $id = $data['userId'];
+
+    try {
+        $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE id = ?");
+        $stmt->execute([$id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user && $user['email']) {
+            $token = bin2hex(random_bytes(32));
+            $expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+            $update = $pdo->prepare("UPDATE users SET reset_token = ?, token_expiry = ? WHERE id = ?");
+            $update->execute([$token, $expiry, $id]);
+
+            send_password_reset_email($user['email'], $user['name'], $token);
+
+            echo json_encode(['success' => true, 'message' => 'Password reset link sent to employee.']);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'User not found or has no email address.']);
+        }
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
 }
 ?>

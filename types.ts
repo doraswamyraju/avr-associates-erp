@@ -47,6 +47,9 @@ export interface User {
     avatar?: string;
     clientId?: string; 
     branch?: BranchName;
+    email?: string;
+    phone?: string;
+    status?: 'Active' | 'Inactive';
     isClockedIn?: boolean;
     clockInTime?: Date;
 }
@@ -163,6 +166,8 @@ export interface Staff {
     branch: BranchName;
     avatarUrl: string;
     email?: string;
+    phone?: string;
+    status?: 'Active' | 'Inactive';
     isClockedIn?: boolean;
     hourlyRate: number; // For project profitability
     mtdTrackedHours: number; // For payroll management
