@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ExcelImporter } from './ExcelImporter';
 import { SERVICE_TYPES } from '../constants';
-import { BranchName, Client, Project, Task, TaskStatus, Branch, IncomingRegisterEntry } from '../types';
+import { BranchName, Client, Project, Task, TaskStatus, Branch, IncomingRegisterEntry, Invoice } from '../types';
 import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
     Building, LayoutGrid, List, Landmark, MapPin, UserPlus,
-    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye
+    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye, Download
 } from 'lucide-react';
+import { generateInvoicePDF } from '../src/utils/pdfGenerator';
 
 import { api } from '../src/services/api';
 
@@ -683,18 +684,21 @@ const ClientOnboardingWizard: React.FC<OnboardingProps> = ({ onBack, onSave, def
 const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEdit?: () => void, onNewEngagement?: () => void }> = ({ client, onBack, onEdit, onNewEngagement }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [incomingRegisters, setIncomingRegisters] = useState<IncomingRegisterEntry[]>([]);
-    const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'profile'>('overview');
+    const [invoices, setInvoices] = useState<Invoice[]>([]);
+    const [activeTab, setActiveTab] = useState<'overview' | 'projects' | 'tasks' | 'invoices' | 'profile'>('overview');
     const [selectedRegister, setSelectedRegister] = useState<IncomingRegisterEntry | null>(null);
 
     useEffect(() => {
         const fetchRelated = async () => {
             try {
-                const [t, irRes] = await Promise.all([
+                const [t, irRes, invs] = await Promise.all([
                     api.getTasks(client.id), 
-                    api.getIncomingRegister(100, 0, '', 'All Branches', client.name)
+                    api.getIncomingRegister(100, 0, '', 'All Branches', client.name),
+                    api.getInvoices(client.id)
                 ]);
                 setTasks(t);
                 setIncomingRegisters(irRes.data || []);
+                setInvoices(invs || []);
             } catch (e) {
                 console.error("Failed to load client details", e);
             }
@@ -706,6 +710,7 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
         { id: 'overview', label: 'Overview', icon: LayoutGrid },
         { id: 'projects', label: 'Registers', icon: Briefcase, count: incomingRegisters.length },
         { id: 'tasks', label: 'Workflow', icon: List, count: tasks.length },
+        { id: 'invoices', label: 'Invoices', icon: CreditCard, count: invoices.length },
         { id: 'profile', label: 'Profile Data', icon: User },
     ];
 
@@ -865,6 +870,54 @@ const AdminClientDetailView: React.FC<{ client: Client, onBack: () => void, onEd
                                 <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">
                                     <List size={48} className="mx-auto text-slate-200 mb-4" />
                                     <p className="text-slate-400 font-bold">No workflow tasks pending.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'invoices' && (
+                        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-6">
+                            {invoices.length > 0 ? (
+                                <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-100">
+                                            <tr>
+                                                <th className="px-8 py-5">Invoice #</th>
+                                                <th className="px-8 py-5">Date</th>
+                                                <th className="px-8 py-5 text-right">Amount</th>
+                                                <th className="px-8 py-5">Status</th>
+                                                <th className="px-8 py-5 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {invoices.map(inv => (
+                                                <tr key={inv.id} className="hover:indigo-50/30 transition-colors">
+                                                    <td className="px-8 py-6 font-mono text-slate-600 font-bold">{inv.invoiceNumber || inv.id}</td>
+                                                    <td className="px-8 py-6 font-bold text-slate-600">{inv.date}</td>
+                                                    <td className="px-8 py-6 text-right font-black text-slate-800">₹{(inv.amount || 0).toLocaleString()}</td>
+                                                    <td className="px-8 py-6">
+                                                        <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                                                            inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700' :
+                                                            inv.status === 'Overdue' ? 'bg-red-50 text-red-700' :
+                                                            'bg-amber-50 text-amber-700'
+                                                        }`}>
+                                                            {inv.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        <button onClick={() => generateInvoicePDF(inv, client)} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-indigo-100 transition-colors">
+                                                            <Download size={14} strokeWidth={3} /> PDF
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="text-center py-20 bg-white rounded-[3rem] border border-slate-200 border-dashed">
+                                    <CreditCard size={48} className="mx-auto text-slate-200 mb-4" />
+                                    <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No Invoices generated yet.</p>
                                 </div>
                             )}
                         </div>

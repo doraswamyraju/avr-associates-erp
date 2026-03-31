@@ -10,6 +10,7 @@ import { BranchName, Client, TaskStatus, Invoice, ClientDocument } from '../type
 import { MOCK_TASKS, MOCK_INVOICES, MOCK_DOCUMENTS, MOCK_COMPLIANCE_EVENTS } from '../constants';
 import { StatusBadge } from './Dashboard';
 import { api } from '../src/services/api';
+import { generateInvoicePDF } from '../src/utils/pdfGenerator';
 
 interface ClientPortalProps {
     client: Client;
@@ -27,12 +28,14 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [t, d] = await Promise.all([
+                const [t, d, invs] = await Promise.all([
                     api.getTasks(client.id),
-                    api.getDocuments(client.id)
+                    api.getDocuments(client.id),
+                    api.getInvoices(client.id)
                 ]);
                 setTasks(t);
                 setDocuments(d);
+                setInvoices(invs || []);
             } catch (err) {
                 console.error("Failed to load portal data", err);
             } finally {
@@ -62,7 +65,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
 
     // Filter Data for this Client (using API data)
     const myTasks = tasks; // API already filters by clientID
-    const myInvoices = MOCK_INVOICES.filter(i => i.clientId === client.id); // Keeping mock for now as invoices API not fully ready/requested
+    const myInvoices = invoices;
     const myDocuments = documents;
 
     // Derived Metrics from Real Data
@@ -458,38 +461,46 @@ const ClientPortal: React.FC<ClientPortalProps> = ({ client, onLogout }) => {
                                 <h3 className="font-bold text-slate-800">Invoice History</h3>
                             </div>
                             <div className="divide-y divide-slate-100">
-                                {myInvoices.map(inv => (
+                                {myInvoices.length > 0 ? myInvoices.map(inv => (
                                     <div key={inv.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
                                         <div className="flex items-center gap-4">
-                                            <div className={`p-3 rounded-full ${inv.status === 'Paid' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                            <div className={`p-3 rounded-full ${inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                                                 <FileText size={20} />
                                             </div>
                                             <div>
-                                                <p className="font-bold text-slate-800">{inv.id}</p>
-                                                <p className="text-xs text-slate-500">{inv.date} • {inv.items.length} items</p>
+                                                <p className="font-bold text-slate-800">{inv.invoiceNumber || inv.id}</p>
+                                                <p className="text-xs text-slate-500">{inv.date} • {inv.items?.length || 0} items</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-6">
                                             <div className="text-right">
-                                                <p className="font-bold text-slate-800">₹{inv.amount.toLocaleString()}</p>
-                                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${inv.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                <p className="font-bold text-slate-800">₹{(inv.amount || 0).toLocaleString()}</p>
+                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${inv.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                                                     }`}>
                                                     {inv.status}
                                                 </span>
                                             </div>
+                                            
+                                            <button 
+                                                onClick={() => generateInvoicePDF(inv, client)}
+                                                className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-colors"
+                                            >
+                                                <Download size={16} /> PDF
+                                            </button>
+                                            
                                             {inv.status !== 'Paid' && (
-                                                <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-indigo-700">
-                                                    Pay Now
-                                                </button>
-                                            )}
-                                            {inv.status === 'Paid' && (
-                                                <button className="text-slate-400 hover:text-indigo-600">
-                                                    <Download size={20} />
+                                                <button className="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg active:scale-95">
+                                                    Pay
                                                 </button>
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="p-10 text-center flex flex-col items-center justify-center">
+                                        <FileText size={40} className="text-slate-200 mb-3" />
+                                        <p className="text-slate-400 font-bold text-sm">No invoices found.</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -130,14 +130,30 @@ export interface TaskHistoryLog {
     timestamp: string;
 }
 
+export interface InvoiceItem {
+    id: string;
+    description: string;
+    hsnSac: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+}
+
 export interface Invoice {
     id: string;
+    invoiceNumber?: string;
     clientId: string;
     clientName: string;
     date: string;
+    dueDate?: string;
     amount: number;
+    subTotal?: number;
+    cgst?: number;
+    sgst?: number;
+    igst?: number;
+    notes?: string;
     status: 'Paid' | 'Unpaid' | 'Overdue';
-    items: string[];
+    items: any[]; // Can be string[] for old records, InvoiceItem[] for new
 }
 
 export interface Staff {

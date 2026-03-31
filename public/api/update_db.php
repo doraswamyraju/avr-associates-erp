@@ -107,6 +107,26 @@ try {
         }
     }
 
+    // Alter invoices table to add GST fields
+    $sql = "SHOW COLUMNS FROM invoices LIKE 'invoice_number'";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute();
+
+    if ($stmt->rowCount() == 0) {
+        $sql = "ALTER TABLE invoices 
+                ADD COLUMN invoice_number VARCHAR(100),
+                ADD COLUMN due_date DATE,
+                ADD COLUMN sub_total DECIMAL(15, 2) DEFAULT 0,
+                ADD COLUMN cgst DECIMAL(15, 2) DEFAULT 0,
+                ADD COLUMN sgst DECIMAL(15, 2) DEFAULT 0,
+                ADD COLUMN igst DECIMAL(15, 2) DEFAULT 0,
+                ADD COLUMN notes TEXT";
+        $pdo->exec($sql);
+        echo "Columns 'invoice_number', GST fields, notes added successfully to 'invoices'.<br>";
+    } else {
+        echo "GST Columns already exist in 'invoices'.<br>";
+    }
+
 }
 catch (PDOException $e) {
     echo "Error: " . $e->getMessage();

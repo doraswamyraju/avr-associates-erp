@@ -187,9 +187,25 @@ export const api = {
     },
 
     // Invoices
-    getInvoices: async (): Promise<Invoice[]> => {
-        const response = await fetch(`${API_BASE_URL}/invoices.php`);
+    getInvoices: async (clientId?: string): Promise<Invoice[]> => {
+        const url = clientId 
+            ? `${API_BASE_URL}/invoices.php?clientId=${clientId}`
+            : `${API_BASE_URL}/invoices.php`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to fetch invoices');
+        return response.json();
+    },
+
+    createInvoice: async (invoice: Omit<Invoice, 'id'> | Invoice): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/invoices.php`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(invoice)
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create invoice');
+        }
         return response.json();
     },
 
