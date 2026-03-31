@@ -1,6 +1,18 @@
 <?php
 
 /**
+ * Helper to read SMTP responses
+ */
+function get_smtp_response($socket) {
+    $response = "";
+    while ($str = fgets($socket, 515)) {
+        $response .= $str;
+        if (substr($str, 3, 1) == " ") break;
+    }
+    return $response;
+}
+
+/**
  * Robust SMTP Email Sender
  * Directly communicates with smtp.gmail.com without extra library requirements.
  */
@@ -21,7 +33,6 @@ function send_erp_email($to, $subject, $message) {
             .content { padding: 40px; }
             .footer { padding: 30px; text-align: center; font-size: 12px; color: #94a3b8; background-color: #f1f5f9; }
             .button { display: inline-block; padding: 14px 28px; background: #4f46e5; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: bold; margin-top: 24px; }
-            .highlight { color: #4f46e5; font-weight: bold; }
         </style>
     </head>
     <body>
@@ -33,65 +44,58 @@ function send_erp_email($to, $subject, $message) {
     </body>
     </html>";
 
-    $timeout = 10;
-    $socket = fsockopen($host, $port, $errno, $errstr, $timeout);
-    if (!$socket) return false;
-
-    function smtp_resp($socket) {
-        $response = "";
-        while ($str = fgets($socket, 515)) {
-            $response .= $str;
-            if (substr($str, 3, 1) == " ") break;
+    try {
+        $timeout = 10;
+        $socket = @fsockopen($host, $port, $errno, $errstr, $timeout);
+        if (!$socket) {
+            // Fallback to mail() if socket fails
+            $headers = "MIME-Version: 1.0\r\nContent-type:text/html;charset=UTF-8\r\nFrom: AVR Associates <$from>\r\n";
+            return @mail(is_array($to) ? implode(',', $to) : $to, $subject, $html_template, $headers);
         }
-        return $response;
-    }
 
-    smtp_resp($socket); // read 220
-    fwrite($socket, "EHLO " . $_SERVER['HTTP_HOST'] . "\r\n");
-    smtp_resp($socket);
-    
-    fwrite($socket, "STARTTLS\r\n");
-    smtp_resp($socket);
-    stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+        get_smtp_response($socket); 
+        fwrite($socket, "EHLO " . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "\r\n");
+        get_smtp_response($socket);
+        
+        fwrite($socket, "STARTTLS\r\n");
+        get_smtp_response($socket);
+        stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
 
-    fwrite($socket, "EHLO " . $_SERVER['HTTP_HOST'] . "\r\n");
-    smtp_resp($socket);
+        fwrite($socket, "EHLO " . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "\r\n");
+        get_smtp_response($socket);
 
-    fwrite($socket, "AUTH LOGIN\r\n");
-    smtp_resp($socket);
-    fwrite($socket, base64_encode($user) . "\r\n");
-    smtp_resp($socket);
-    fwrite($socket, base64_encode($pass) . "\r\n");
-    $auth = smtp_resp($socket);
+        fwrite($socket, "AUTH LOGIN\r\n");
+        get_smtp_response($socket);
+        fwrite($socket, base64_encode($user) . "\r\n");
+        get_smtp_response($socket);
+        fwrite($socket, base64_encode($pass) . "\r\n");
+        $auth = get_smtp_response($socket);
 
-    if (strpos($auth, '235') === false) {
+        if (strpos($auth, '235') === false) {
+            fclose($socket);
+            return false;
+        }
+
+        $to_list = is_array($to) ? $to : [$to];
+        foreach($to_list as $recipient) {
+            fwrite($socket, "MAIL FROM: <$from>\r\n");
+            get_smtp_response($socket);
+            fwrite($socket, "RCPT TO: <$recipient>\r\n");
+            get_smtp_response($socket);
+            fwrite($socket, "DATA\r\n");
+            get_smtp_response($socket);
+
+            $headers = "MIME-Version: 1.0\r\nContent-type: text/html; charset=UTF-8\r\nTo: $recipient\r\nFrom: AVR Associates <$from>\r\nSubject: $subject\r\nDate: " . date('r') . "\r\n";
+            fwrite($socket, $headers . "\r\n" . $html_template . "\r\n.\r\n");
+            get_smtp_response($socket);
+        }
+
+        fwrite($socket, "QUIT\r\n");
         fclose($socket);
+        return true;
+    } catch (Exception $e) {
         return false;
     }
-
-    $to_list = is_array($to) ? $to : [$to];
-    foreach($to_list as $recipient) {
-        fwrite($socket, "MAIL FROM: <$from>\r\n");
-        smtp_resp($socket);
-        fwrite($socket, "RCPT TO: <$recipient>\r\n");
-        smtp_resp($socket);
-        fwrite($socket, "DATA\r\n");
-        smtp_resp($socket);
-
-        $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-type: text/html; charset=UTF-8\r\n";
-        $headers .= "To: $recipient\r\n";
-        $headers .= "From: AVR Associates <$from>\r\n";
-        $headers .= "Subject: $subject\r\n";
-        $headers .= "Date: " . date('r') . "\r\n";
-
-        fwrite($socket, $headers . "\r\n" . $html_template . "\r\n.\r\n");
-        smtp_resp($socket);
-    }
-
-    fwrite($socket, "QUIT\r\n");
-    fclose($socket);
-    return true;
 }
 
 function send_welcome_email($to, $name, $username, $reset_token) {
