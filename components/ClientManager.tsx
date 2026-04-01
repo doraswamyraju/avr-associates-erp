@@ -6,7 +6,8 @@ import {
     Search, Plus, Mail, Phone, FileText, ArrowLeft, Check,
     ChevronRight, Briefcase, CreditCard, Shield, User,
     Building, LayoutGrid, List, Landmark, MapPin, UserPlus,
-    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye, Download, RefreshCw
+    Calendar, Users, Info, Trash2, Edit, FolderOpen, Eye, Download, RefreshCw,
+    BarChart3, Activity, ShieldCheck
 } from 'lucide-react';
 import { generateInvoicePDF } from '../src/utils/pdfGenerator';
 
@@ -59,14 +60,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
         setLoading(true);
         const fetchClients = async () => {
             try {
-                let typeFilter = undefined;
-                if (selectedServiceFilter === 'ROC') typeFilter = 'Company'; // Simplified approximation for ROC
-                
-                // If it's a specific GST filter or other, we search locally on the loaded batch for now 
-                // Alternatively we could add specific filter params to backend, but this natively loads 
-                // chunked subsets of 'All' based on name/phone search.
-                
-                const response = await api.getClients(LIMIT, offset, debouncedSearch, selectedBranch === BranchName.ALL ? undefined : selectedBranch, undefined, typeFilter);
+                const response = await api.getClients(LIMIT, offset, debouncedSearch, selectedBranch === BranchName.ALL ? undefined : selectedBranch, undefined);
                 if (cancelled) return;
                 
                 if (offset === 0) {
@@ -95,15 +89,21 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
 
     const serviceCategories = [
         { id: 'All', label: 'All Clients', icon: User },
-        { id: 'GST', label: 'GST Compliance', icon: Briefcase },
-        { id: 'INCOME TAX', label: 'Income Tax', icon: FileText },
-        { id: 'TDS', label: 'TDS Filing', icon: CreditCard },
-        { id: 'ROC', label: 'Company Law', icon: Building },
-        { id: 'TAX AUDIT', label: 'Tax Audits', icon: Shield },
+        { id: 'GST', label: 'GST', icon: Briefcase },
+        { id: 'TDS', label: 'TDS', icon: CreditCard },
+        { id: 'Income tax', label: 'Income tax', icon: FileText },
+        { id: 'Food licence', label: 'Food licence', icon: Landmark },
+        { id: 'MSME', label: 'MSME', icon: Building },
+        { id: 'Labour', label: 'Labour', icon: Users },
+        { id: 'Project Report', label: 'Project Report', icon: BarChart3 },
+        { id: 'Projections', label: 'Projections', icon: Activity },
+        { id: 'PF AND ESI', label: 'PF AND ESI', icon: ShieldCheck },
+        { id: 'TAX AUDIT', label: 'TAX AUDIT', icon: Shield },
+        { id: 'Other Services', label: 'Other Services', icon: Info },
     ];
 
     const filteredClients = clients.filter(client => {
-        if (selectedServiceFilter !== 'All' && selectedServiceFilter !== 'ROC') {
+        if (selectedServiceFilter !== 'All') {
             if (selectedServiceFilter === 'GST') {
                 if (!client.selectedServices?.some(s => s.includes('GST'))) return false;
             } else {
