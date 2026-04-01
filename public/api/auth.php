@@ -49,8 +49,8 @@ function handleLogin($pdo, $data) {
     $password = $data['password'];
 
     try {
-        $stmt = $pdo->prepare("SELECT id, name, role, avatar, client_id, branch, email, password_hash FROM users WHERE username = ?");
-        $stmt->execute([$username]);
+        $stmt = $pdo->prepare("SELECT id, name, role, avatar, client_id, branch, email, password_hash FROM users WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
