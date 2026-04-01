@@ -157,6 +157,18 @@ try {
         echo "Column 'phone' added to 'staff'.<br>";
     }
 
+    // Add status to users and staff if missing
+    $stmt = $pdo->query("SHOW COLUMNS FROM users LIKE 'status'");
+    if ($stmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE users ADD COLUMN status VARCHAR(50) DEFAULT 'Active'");
+        echo "Column 'status' added to 'users'.<br>";
+    }
+    $stmt = $pdo->query("SHOW COLUMNS FROM staff LIKE 'status'");
+    if ($stmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE staff ADD COLUMN status VARCHAR(50) DEFAULT 'Active'");
+        echo "Column 'status' added to 'staff'.<br>";
+    }
+
 }
 catch (PDOException $e) {
     echo "Error: " . $e->getMessage();
