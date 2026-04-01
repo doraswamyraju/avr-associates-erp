@@ -92,6 +92,20 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
         }
     };
 
+    const handleDeleteStaff = async (staffId: string, staffName: string) => {
+        if (!window.confirm(`Are you sure you want to permanently delete ${staffName}? This will also remove their login access.`)) {
+            return;
+        }
+
+        try {
+            await api.deleteStaff(staffId);
+            alert('Staff member deleted successfully.');
+            fetchData();
+        } catch (err: any) {
+            alert('Error: ' + err.message);
+        }
+    };
+
     const filteredStaff = staffList.filter(staff => {
         const matchesBranch = selectedBranch === BranchName.ALL || staff.branch === selectedBranch;
         const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -266,6 +280,12 @@ const StaffManager: React.FC<StaffManagerProps> = ({ selectedBranch, availableBr
                                             </button>
                                             <button className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 text-amber-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 hover:text-white transition-all shadow-sm">
                                                 <Power size={14} /> Deactivate
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteStaff(staff.id, staff.name)}
+                                                className="flex items-center gap-1.5 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                            >
+                                                <Trash2 size={14} /> Delete
                                             </button>
                                             <button 
                                                 onClick={() => handleSendPasswordLink(staff.id, staff.email || "")}

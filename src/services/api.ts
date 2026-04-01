@@ -250,6 +250,17 @@ export const api = {
         return response.json();
     },
 
+    deleteStaff: async (id: string): Promise<any> => {
+        const response = await fetch(`${API_BASE_URL}/staff.php?id=${id}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to delete staff');
+        }
+        return response.json();
+    },
+
     // Documents
     uploadDocument: async (formData: FormData) => {
         const response = await fetch(`${API_BASE_URL}/documents.php`, {

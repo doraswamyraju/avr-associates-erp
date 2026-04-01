@@ -111,5 +111,33 @@ switch ($method) {
             echo json_encode(['error' => $e->getMessage()]);
         }
         break;
+
+    case 'DELETE':
+        $id = $_GET['id'] ?? null;
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing staff ID']);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+            
+            // Delete from staff table
+            $stmtStaff = $pdo->prepare("DELETE FROM staff WHERE id = ?");
+            $stmtStaff->execute([$id]);
+            
+            // Delete from users table
+            $stmtUser = $pdo->prepare("DELETE FROM users WHERE id = ?");
+            $stmtUser->execute([$id]);
+            
+            $pdo->commit();
+            echo json_encode(['success' => true, 'message' => 'Staff and user account deleted successfully.']);
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        break;
 }
 ?>
