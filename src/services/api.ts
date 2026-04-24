@@ -13,11 +13,11 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(credentials)
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Login failed');
+            const data = await response.json();
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Login failed');
             }
-            return response.json();
+            return data;
         },
         forgotPassword: async (email: string): Promise<any> => {
             const response = await fetch(`${API_BASE_URL}/auth.php?action=forgot_password`, {
@@ -25,11 +25,11 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Request failed');
+            const data = await response.json();
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Request failed');
             }
-            return response.json();
+            return data;
         },
         resetPassword: async (data: any): Promise<any> => {
             const response = await fetch(`${API_BASE_URL}/auth.php?action=reset_password`, {
@@ -37,11 +37,11 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Reset failed');
+            const responseData = await response.json();
+            if (!response.ok || responseData.error) {
+                throw new Error(responseData.error || 'Reset failed');
             }
-            return response.json();
+            return responseData;
         },
         verifyResetToken: async (token: string): Promise<any> => {
             const response = await fetch(`${API_BASE_URL}/auth.php?action=verify_token`, {
@@ -49,11 +49,11 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token })
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Invalid token');
+            const data = await response.json();
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Invalid token');
             }
-            return response.json();
+            return data;
         },
         adminSendResetLink: async (userId: string, email: string): Promise<any> => {
             const response = await fetch(`${API_BASE_URL}/auth.php?action=admin_send_reset`, {
@@ -61,11 +61,11 @@ export const api = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId, email })
             });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to send reset link');
+            const data = await response.json();
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Failed to send reset link');
             }
-            return response.json();
+            return data;
         }
     },
 

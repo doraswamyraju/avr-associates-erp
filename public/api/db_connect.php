@@ -10,20 +10,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit;
 }
 
-$host = 'localhost';
 $charset = 'utf8mb4';
 
 // Environment Detection
 if ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1') {
     // Local Development
+    $host = 'localhost';
     $db   = 'avr_erp_db';
     $user = 'root'; 
     $pass = '';     
 } else {
     // Production (Hostinger VPS)
-    // You should create a 'db_production_config.php' on the server with these variables
-    // OR set them here if you don't plan to commit this file often.
-    // For automatic deployment safety, we'll try to include a config file first.
+    $host = '127.0.0.1'; // Use IP instead of localhost to avoid socket issues
     
     if (file_exists(__DIR__ . '/../db_production_config.php')) {
         include __DIR__ . '/../db_production_config.php';
@@ -53,10 +51,12 @@ try {
             $dsn_no_db = "mysql:host=$host;charset=$charset";
             $pdo = new PDO($dsn_no_db, $user, $pass, $options);
         } catch (\PDOException $e2) {
+             http_response_code(500);
              echo json_encode(['error' => 'Connection failed: ' . $e2->getMessage()]);
              exit;
         }
     } else {
+        http_response_code(500);
         echo json_encode(['error' => 'Connection failed: ' . $e->getMessage()]);
         exit;
     }

@@ -122,7 +122,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                                 value={username}
                                                 onChange={(e) => setUsername(e.target.value)}
                                                 className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-4 pl-14 pr-6 text-sm text-white font-medium focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-600"
-                                                placeholder="Enter account ID"
+                                                placeholder="Enter username or email"
                                                 disabled={isLoading}
                                             />
                                         </div>
