@@ -45,6 +45,7 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                 setInvoices(invoicesData);
                 setStaffList(staffData);
                 setIncomingTotal(incomingData.total || 0);
+                const fetchedIncoming = incomingData.data || [];
                 setVisitorRegister(visitorData.data || []);
                 setVisitorTotal(visitorData.total || 0);
                 // Active Projects = Data Received + Work In Progress
@@ -64,6 +65,46 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
     const branchFilteredClients = clients.filter(c => selectedBranch === BranchName.ALL || c.branch === selectedBranch);
     const branchFilteredVisitors = visitorRegister.filter(v => selectedBranch === BranchName.ALL || v.branch === selectedBranch);
     const branchFilteredStaff = staffList.filter(s => selectedBranch === BranchName.ALL || s.branch === selectedBranch);
+    
+    // New Calculations for new visuals
+    const [pendingVerificationList, setPendingVerificationList] = useState<IncomingRegisterEntry[]>([]);
+    
+    useEffect(() => {
+        const fetchPendingVerification = async () => {
+            try {
+                // Fetch more records to find pending verifications if needed, or use a larger limit in the main load
+                const incomingAll = await api.getIncomingRegister(500, 0, '', selectedBranch);
+                const pending = (incomingAll.data || []).filter((item: IncomingRegisterEntry) => item.verifiedStatus !== 'Verified' && item.status !== 'Completed');
+                setPendingVerificationList(pending);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        fetchPendingVerification();
+    }, [selectedBranch]);
+
+    // Branch wise unpaid amounts
+    const branchUnpaid: Record<string, number> = {};
+    invoices.forEach(inv => {
+        if (inv.status === 'Unpaid' || inv.status === 'Overdue') {
+            const client = clients.find(c => c.id === inv.clientId);
+            const branchName = client?.branch || 'Unknown';
+            if (selectedBranch === BranchName.ALL || branchName === selectedBranch) {
+                branchUnpaid[branchName] = (branchUnpaid[branchName] || 0) + (inv.amount || 0);
+            }
+        }
+    });
+
+    // Employee wise pending tasks
+    const employeePending: Record<string, number> = {};
+    tasks.forEach(task => {
+        if (task.status !== TaskStatus.COMPLETED && task.status !== TaskStatus.FILED) {
+            if (selectedBranch === BranchName.ALL || task.branch === selectedBranch) {
+                const empName = task.assignedTo || 'Unassigned';
+                employeePending[empName] = (employeePending[empName] || 0) + 1;
+            }
+        }
+    });
     // branchFilteredProjects removed - Active Projects now comes from incoming register stats (Data Received + WIP)
 
     const services = [
@@ -252,6 +293,103 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
                             onCardClick={() => onNavigate?.('visitors')}
                             onClickAction={(e: any) => { e.stopPropagation(); onNavigate?.('visitors', { quickAction: 'ADD_VISITOR' }); }}
                         />
+                    </div>
+                </div>
+
+                {/* New Analytical Visuals Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
+                    {/* Branch Wise Unpaid List */}
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 flex flex-col h-[400px]">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
+                                <IndianRupee size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Unpaid Dues</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Branch Wise Overview</p>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                            {Object.keys(branchUnpaid).length > 0 ? Object.entries(branchUnpaid).sort((a, b) => b[1] - a[1]).map(([branch, amount]) => (
+                                <div key={branch} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                    <span className="font-bold text-slate-700">{branch}</span>
+                                    <span className="font-black text-rose-600">₹{amount.toLocaleString()}</span>
+                                </div>
+                            )) : (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                    <CheckCircle2 size={32} className="mb-2 text-emerald-400" />
+                                    <p className="font-bold text-sm">No Unpaid Invoices</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Employee Wise Pending List */}
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 flex flex-col h-[400px]">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
+                                <Clock size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 tracking-tight">Pending Tasks</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Employee Wise Status</p>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                            {Object.keys(employeePending).length > 0 ? Object.entries(employeePending).sort((a, b) => b[1] - a[1]).map(([emp, count]) => (
+                                <div key={emp} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:bg-indigo-50 transition-colors">
+                                    <span className="font-bold text-slate-700 flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-black text-xs">
+                                            {emp.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        {emp}
+                                    </span>
+                                    <span className="font-black text-amber-600 bg-amber-100 px-3 py-1 rounded-lg">{count} Tasks</span>
+                                </div>
+                            )) : (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                    <CheckCircle2 size={32} className="mb-2 text-emerald-400" />
+                                    <p className="font-bold text-sm">No Pending Tasks</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* To Do Verification List */}
+                    <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl p-8 flex flex-col h-[400px]">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+                                    <Shield size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800 tracking-tight">To Do Verification</h3>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pending Registers</p>
+                                </div>
+                            </div>
+                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-xl text-xs font-black">{pendingVerificationList.length}</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                            {pendingVerificationList.length > 0 ? pendingVerificationList.slice(0, 20).map((item) => (
+                                <div key={item.id} onClick={() => onNavigate?.('incoming')} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-blue-50 hover:border-blue-200 cursor-pointer transition-all">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="font-black text-slate-800 text-sm line-clamp-1">{item.customerName || 'Unknown Client'}</span>
+                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded-md whitespace-nowrap">{item.date}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-medium text-slate-600 truncate">{item.serviceName}</span>
+                                        <span className="text-[10px] font-black uppercase text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">
+                                            {item.verifiedStatus || 'Not Verified'}
+                                        </span>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                    <CheckCircle2 size={32} className="mb-2 text-emerald-400" />
+                                    <p className="font-bold text-sm">All Verified</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
