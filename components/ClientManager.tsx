@@ -24,7 +24,7 @@ interface ClientManagerProps {
 
 type ViewState = 'directory' | 'client_detail' | 'onboarding';
 
-const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, availableBranches, onNavigate }) => {
+const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickAction, initialData, onQuickActionHandled, availableBranches, onNavigate }) => {
     const [viewMode, setViewMode] = useState<ViewState>('directory');
     const [directoryViewType, setDirectoryViewType] = useState<'grid' | 'list'>('list');
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
