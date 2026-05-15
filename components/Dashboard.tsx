@@ -16,6 +16,39 @@ interface DashboardProps {
     onNavigate?: (tab: string, params?: any) => void;
 }
 
+export const TrackerCard = ({ title, count, icon: Icon, actionLabel, onClickAction, variant = 'blue', onCardClick }: any) => {
+    const bgColors: any = {
+        blue: 'bg-[#67B7D1] hover:bg-[#5AA8C0]',
+        indigo: 'bg-indigo-600 hover:bg-indigo-700',
+        slate: 'bg-slate-800 hover:bg-slate-900',
+        rose: 'bg-rose-500 hover:bg-rose-600',
+        emerald: 'bg-emerald-600 hover:bg-emerald-700'
+    };
+
+    return (
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
+            <div className="p-10 flex-1 relative cursor-pointer" onClick={onCardClick}>
+                <div className="absolute top-8 right-8 text-slate-100 transition-colors group-hover:text-indigo-100">
+                    <Icon size={64} strokeWidth={1.5} />
+                </div>
+                <div className="relative z-10 space-y-2">
+                    <h3 className="text-3xl font-black text-slate-800 tracking-tight">{title}</h3>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-black text-slate-900">{count}</span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Records Found</span>
+                    </div>
+                </div>
+            </div>
+            <button 
+                onClick={onClickAction}
+                className={`w-full py-4 text-white font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-colors border-t border-black/5 ${bgColors[variant] || bgColors.blue}`}
+            >
+                {actionLabel} <ArrowRight size={14} />
+            </button>
+        </div>
+    );
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, currentUser, onNavigate }) => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
@@ -123,38 +156,6 @@ const Dashboard: React.FC<DashboardProps> = ({ selectedBranch, userRole, current
         { id: 'deleted', name: 'Deleted Users', icon: Trash2, color: 'text-slate-400', bg: 'bg-slate-50' },
     ];
 
-    const TrackerCard = ({ title, count, icon: Icon, actionLabel, onClickAction, variant = 'blue', onCardClick }: any) => {
-        const bgColors: any = {
-            blue: 'bg-[#67B7D1] hover:bg-[#5AA8C0]',
-            indigo: 'bg-indigo-600 hover:bg-indigo-700',
-            slate: 'bg-slate-800 hover:bg-slate-900',
-            rose: 'bg-rose-500 hover:bg-rose-600',
-            emerald: 'bg-emerald-600 hover:bg-emerald-700'
-        };
-
-        return (
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-hidden group hover:shadow-2xl transition-all duration-500 flex flex-col h-full">
-                <div className="p-10 flex-1 relative cursor-pointer" onClick={onCardClick}>
-                    <div className="absolute top-8 right-8 text-slate-100 transition-colors group-hover:text-indigo-100">
-                        <Icon size={64} strokeWidth={1.5} />
-                    </div>
-                    <div className="relative z-10 space-y-2">
-                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">{title}</h3>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-5xl font-black text-slate-900">{count}</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Records Found</span>
-                        </div>
-                    </div>
-                </div>
-                <button 
-                    onClick={onClickAction}
-                    className={`w-full py-4 text-white font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-colors border-t border-black/5 ${bgColors[variant] || bgColors.blue}`}
-                >
-                    {actionLabel} <ArrowRight size={14} />
-                </button>
-            </div>
-        );
-    };
 
     const ServiceTab = ({ id, name, icon: Icon, color, bg }: any) => (
         <div 
