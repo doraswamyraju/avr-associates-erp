@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
+import EmployeeDashboard from './components/EmployeeDashboard';
 import ClientManager from './components/ClientManager';
 import ClientPortal from './components/ClientPortal';
 import TaskManager from './components/TaskManager';
@@ -132,6 +133,9 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
+        if (user.role === UserRole.EMPLOYEE) {
+            return <EmployeeDashboard selectedBranch={selectedBranch} currentUser={user} onNavigate={handleNavigation} />;
+        }
         return <Dashboard selectedBranch={selectedBranch} userRole={user.role} currentUser={user} onNavigate={handleNavigation} />;
       case 'clients':
         return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} initialData={pageParams?.initialData} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} onNavigate={handleNavigation} />;
