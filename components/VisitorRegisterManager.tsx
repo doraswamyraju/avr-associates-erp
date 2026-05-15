@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../src/services/api';
 import { BranchName, VisitorRegisterEntry } from '../types';
-import { Search, Plus, Edit, Trash2, ArrowLeft, Save, AlertCircle, MapPin, User, Phone, FileText, Calendar, X, Download, RefreshCw } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, ArrowLeft, Save, AlertCircle, MapPin, User, Phone, FileText, Calendar, X, Download, RefreshCw, UserPlus } from 'lucide-react';
 import { ExcelImporter } from './ExcelImporter';
 
 interface VisitorRegisterManagerProps {
     selectedBranch: BranchName;
     quickAction?: string | null;
     onQuickActionHandled?: () => void;
+    onNavigate?: (tab: string, params?: any) => void;
 }
 
-const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled }) => {
+const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selectedBranch, quickAction, onQuickActionHandled, onNavigate }) => {
     const [viewMode, setViewMode] = useState<'list' | 'form'>('list');
     const [editingEntry, setEditingEntry] = useState<VisitorRegisterEntry | null>(null);
     const [visitors, setVisitors] = useState<VisitorRegisterEntry[]>([]);
@@ -217,6 +218,35 @@ const VisitorRegisterManager: React.FC<VisitorRegisterManagerProps> = ({ selecte
                                     <td className="px-4 py-2.5 text-slate-600 border-r border-slate-100 whitespace-nowrap">{v.visitDate || '-'}</td>
                                     <td className="px-4 py-2.5 text-center" onClick={e => e.stopPropagation()}>
                                         <div className="flex items-center justify-center gap-1.5">
+                                            <button onClick={() => {
+                                                if (onNavigate) {
+                                                    onNavigate('clients', { 
+                                                        quickAction: 'NEW_CLIENT', 
+                                                        initialData: { 
+                                                            name: v.visitorName, 
+                                                            phone: v.phone, 
+                                                            address: v.address,
+                                                            branch: v.branch
+                                                        } 
+                                                    });
+                                                }
+                                            }} className="p-1 text-slate-400 hover:text-emerald-600 transition-colors" title="Convert to Customer">
+                                                <UserPlus size={14} />
+                                            </button>
+                                            <button onClick={() => {
+                                                if (onNavigate) {
+                                                    onNavigate('incoming', { 
+                                                        quickAction: 'NEW_INCOMING', 
+                                                        initialData: { 
+                                                            customerName: v.visitorName, 
+                                                            purposeNarration: v.purpose,
+                                                            branch: v.branch
+                                                        } 
+                                                    });
+                                                }
+                                            }} className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="Create Incoming Register">
+                                                <FileText size={14} />
+                                            </button>
                                             <button onClick={() => { setEditingEntry(v); setViewMode('form'); }} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors" title="Edit"><Edit size={14} /></button>
                                             <button onClick={() => handleDelete(v.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors" title="Delete"><Trash2 size={14} /></button>
                                         </div>

@@ -15,8 +15,9 @@ import { api } from '../src/services/api';
 
 interface ClientManagerProps {
     selectedBranch: BranchName;
-    quickAction: string | null;
-    onQuickActionHandled: () => void;
+    quickAction?: string | null;
+    initialData?: Partial<Client>;
+    onQuickActionHandled?: () => void;
     availableBranches: Branch[];
     onNavigate?: (tab: string, params?: any) => void;
 }
@@ -82,10 +83,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ selectedBranch, quickActi
 
     useEffect(() => {
         if (quickAction === 'NEW_CLIENT') {
+            setClientIdToEdit((initialData as Client) || undefined);
             setViewMode('onboarding');
             if (onQuickActionHandled) onQuickActionHandled();
         }
-    }, [quickAction, onQuickActionHandled]);
+    }, [quickAction, initialData, onQuickActionHandled]);
 
     const serviceCategories = [
         { id: 'All', label: 'All Clients', icon: User },

@@ -134,9 +134,9 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard selectedBranch={selectedBranch} userRole={user.role} currentUser={user} onNavigate={handleNavigation} />;
       case 'clients':
-        return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} onNavigate={handleNavigation} />;
+        return <ClientManager selectedBranch={selectedBranch} quickAction={quickAction} initialData={pageParams?.initialData} onQuickActionHandled={resetQuickAction} availableBranches={availableBranches} onNavigate={handleNavigation} />;
       case 'tasks':
-        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} initialData={pageParams?.initialData} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
       case 'billing':
         return <BillingManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
       case 'compliance':
@@ -150,9 +150,9 @@ const App: React.FC = () => {
       case 'branches':
         return <BranchManager />;
       case 'incoming':
-        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} serviceFilter={pageParams?.serviceFilter} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
+        return <IncomingRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} initialData={pageParams?.initialData} serviceFilter={pageParams?.serviceFilter} onQuickActionHandled={resetQuickAction} preSelectedClient={pageParams?.clientExactName} onNavigate={handleNavigation} />;
       case 'visitors':
-        return <VisitorRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} />;
+        return <VisitorRegisterManager selectedBranch={selectedBranch} quickAction={quickAction} onQuickActionHandled={resetQuickAction} onNavigate={handleNavigation} />;
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-slate-400">

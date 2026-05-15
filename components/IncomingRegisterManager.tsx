@@ -10,10 +10,11 @@ interface IncomingRegisterManagerProps {
     serviceFilter?: string | null;
     onQuickActionHandled?: () => void;
     preSelectedClient?: string;
+    initialData?: Partial<IncomingRegisterEntry>;
     onNavigate?: (tab: string, params?: any) => void;
 }
 
-const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, serviceFilter, onQuickActionHandled, preSelectedClient, onNavigate }) => {
+const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selectedBranch, quickAction, serviceFilter, onQuickActionHandled, preSelectedClient, initialData, onNavigate }) => {
     const [viewMode, setViewMode] = useState<'list' | 'add' | 'edit'>('list');
     const [editingRegister, setEditingRegister] = useState<IncomingRegisterEntry | null>(null);
     const [registers, setRegisters] = useState<IncomingRegisterEntry[]>([]);
@@ -76,11 +77,11 @@ const IncomingRegisterManager: React.FC<IncomingRegisterManagerProps> = ({ selec
 
     useEffect(() => {
         if (quickAction === 'NEW_INCOMING') {
-            setEditingRegister(null);
+            setEditingRegister((initialData as IncomingRegisterEntry) || null);
             setViewMode('add');
             if (onQuickActionHandled) onQuickActionHandled();
         }
-    }, [quickAction, onQuickActionHandled]);
+    }, [quickAction, initialData, onQuickActionHandled]);
 
     const fetchDropdownData = async () => {
         try {
